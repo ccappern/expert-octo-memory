@@ -88,6 +88,43 @@ beslutning — se hvor mange som havner der før dere lover å teste alle.
 
 ## Ny workshop eller ny kode
 
+### Bytte kode
+
+```sh
+./supabase/ny_kode.sh              # foreslår koder
+./supabase/ny_kode.sh ABC-234      # setter den
+```
+
+Skriptet gjør koden om til store bokstaver før den hashes. Det er ikke kosmetikk:
+`workshop_by_code` slår opp på `upper(btrim(koden))`, så en hash laget av små bokstaver gjør
+at ingen kommer inn. Det er den enkleste måten å låse seg selv ute på.
+
+**Hvor kort kan koden være?** Databasen bruker rundt 18 ms på å verifisere ett forsøk, altså
+54 gjetninger i sekundet per tråd. `join_workshop` har ingen sperre mot mange forsøk, og
+prosjekt-URL-en ligger offentlig i `config.js`:
+
+| Lengde | Muligheter | Tid å knekke ved ~500 forsøk/sek |
+|---|---|---|
+| Et ord som NORDLYS | 1 | umiddelbart |
+| 4 tegn | 1 mill. | 35 minutter |
+| 5 tegn | 34 mill. | 9 timer |
+| **6 tegn** | **1,1 mrd.** | **12 dager** |
+| 8 tegn | 1,1 bill. | 35 år |
+
+Skriptet nekter koder under seks tegn og bruker et alfabet uten I, O, 0 og 1, slik at koden
+kan leses opp uten at noen skriver feil.
+
+Å øke bcrypt-kostnaden er ikke gratis her: `workshop_by_code` kjører ved **hvert** RPC-kall,
+også hver `get_board` fra pollingen. Seksten deltakere som poller hvert fjerde sekund gir
+fire bcrypt i sekundet. På kostnad 8 er det rundt 7 % av en kjerne, på kostnad 10 blir det
+fire ganger så mye.
+
+**Bytt kode før du sender den ut, ikke underveis.** Alle som er innlogget blir logget ut, og
+når de logger inn igjen oppretter `join_workshop` en *ny* deltaker. De gamle vurderingene
+blir liggende igjen som en usynlig ekstra stemme i snittet.
+
+### Manuelt i SQL Editor
+
 Kjør i Supabase SQL Editor:
 
 ```sql
@@ -185,6 +222,7 @@ kritikalitet.
 - `supabase/reparer.sql` – bringer skjemaet i riktig tilstand uansett utgangspunkt
 - `supabase/sjekk_status.sql` – viser hvilke migrasjoner som er anvendt, endrer ingenting
 - `supabase/kjor.sh` – kjører de to over mot Supabase via docker
+- `supabase/ny_kode.sh` – setter ny workshopkode
 
 Migrasjoner kjøres med Supabase CLI (`supabase db push`), ikke ved å lime inn i SQL Editor.
 Se `AGENTS.md` for rekkefølge og fallgruver — migrasjonshistorikken i fjernbasen er ikke i
