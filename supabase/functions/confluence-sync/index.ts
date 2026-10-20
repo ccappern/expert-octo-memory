@@ -244,7 +244,10 @@ Deno.serve(async (req) => {
 
   const { data: hyps, error: e1 } = await sb.from("hypotheses")
     .select("id, nr, tekst, kriterium, type, status, kilde, eier, frist, status_notat, status_endret, status_av, created_by, created_at")
-    .is("deleted_at", null);
+    .is("deleted_at", null)
+    // Kladd er personlig og har ikke engang fått nummer ennå. Den hører ikke
+    // hjemme på en side resten av prosjektet leser.
+    .eq("publisert", true);
   if (e1) return Response.json({ ok: false, steg: "les hypoteser", feil: e1.message }, { status: 500 });
 
   const { data: rates, error: e2 } = await sb.from("ratings").select("hypothesis_id, participant_id, k, u");

@@ -70,10 +70,17 @@ beslutning — se hvor mange som havner der før dere lover å teste alle.
 
 - Ingen brukerkontoer. Deltakerne skriver inn en felles **passkode** og navnet sitt.
 - Alle tabeller har RLS slått på uten policies, så de kan ikke leses eller endres direkte via API-et.
-- All tilgang går gjennom seks databasefunksjoner (`get_board`, `join_workshop`, `add_hypothesis`,
-  `update_hypothesis`, `delete_hypothesis`, `rate_hypothesis`). Alle krever passkoden.
+- All tilgang går gjennom sju databasefunksjoner (`get_board`, `join_workshop`, `add_hypothesis`,
+  `publish_hypothesis`, `update_hypothesis`, `delete_hypothesis`, `rate_hypothesis`). Alle krever passkoden.
 - Ved innlogging får hver deltaker et tilfeldig token som lagres i nettleseren. Skriving krever
   token, så ingen kan endre andres vurderinger.
+- **Slette kan du bare det du selv har lagt inn.** Knappen vises ikke på andres hypoteser, og
+  databasen avviser forsøket uansett klient. I et rom med seksten deltakere er ett feiltrykk nok
+  til å fjerne noen andres arbeid, og angrefrist finnes ikke.
+- **Kladd er personlig.** En hypotese kan lagres uten å publiseres. Da ser bare du den, den får
+  ikke nummer, og ingen kan vurdere den. Nummeret tildeles i det du trykker «Publiser». Poenget
+  er at en halvtenkt formulering ikke skal samle vurderinger før den er ferdig — snittet bærer
+  preg av teksten den ble gitt på. Kladd skrives heller ikke til Confluence.
 - Passkoden lagres bare som bcrypt-hash i databasen.
 - Supabase-rådgiveren melder at funksjonene er `SECURITY DEFINER` og kan kalles anonymt.
   Det er tilsiktet: funksjonene er selve tilgangskontrollen.
@@ -219,6 +226,9 @@ kritikalitet.
 - `supabase/migrations/0007_skala_1_10.sql` – utvider skalaen fra 1–5 til 1–10
 - `supabase/migrations/0008_fire_typer.sql` – fire typer, og hypotesene om pilot og videreføring
 - `supabase/migrations/0009_status_belegg.sql` – belegg og sporing på statusendringer
+- `supabase/migrations/0010_confluence_sync.sql` – automatisk skriving til Confluence
+- `supabase/migrations/0011_passkode.sql` – passkoden som hash
+- `supabase/migrations/0012_kladd_og_eierskap.sql` – kladd før publisering, og sletting bare av egne
 - `supabase/reparer.sql` – bringer skjemaet i riktig tilstand uansett utgangspunkt
 - `supabase/sjekk_status.sql` – viser hvilke migrasjoner som er anvendt, endrer ingenting
 - `supabase/kjor.sh` – kjører de to over mot Supabase via docker

@@ -63,7 +63,33 @@ with sjekk(nr, hva, ok) as (values
   ('0009', 'get_board leverer belegget', exists(
      select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
       where n.nspname='public' and p.proname='get_board'
-        and pg_get_functiondef(p.oid) like '%h.status_notat%'))
+        and pg_get_functiondef(p.oid) like '%h.status_notat%')),
+
+  ('0012', 'kladd: publisert-kolonne og nullbart nummer', exists(
+     select 1 from information_schema.columns
+      where table_schema='public' and table_name='hypotheses' and column_name='publisert')
+   and exists(
+     select 1 from information_schema.columns
+      where table_schema='public' and table_name='hypotheses' and column_name='nr'
+        and is_nullable='YES')),
+
+  ('0012', 'publish_hypothesis finnes', exists(
+     select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+      where n.nspname='public' and p.proname='publish_hypothesis')),
+
+  ('0012', 'get_board tar imot p_pid for egne kladder', exists(
+     select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+      where n.nspname='public' and p.proname='get_board'
+        and pg_get_function_arguments(p.oid) like '%p_pid%')),
+
+  ('0012', 'delete_hypothesis krever eierskap', exists(
+     select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+      where n.nspname='public' and p.proname='delete_hypothesis'
+        and pg_get_functiondef(p.oid) like '%42501%')),
+
+  ('0012', 'kun én utgave av get_board og add_hypothesis', (
+     select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+      where n.nspname='public' and p.proname in ('get_board','add_hypothesis')) = 2)
 )
 select nr            as "Migrasjon",
        hva           as "Hva som sjekkes",

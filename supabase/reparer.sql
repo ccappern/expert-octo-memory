@@ -30,6 +30,13 @@ alter table public.hypotheses add column if not exists frist date;
 alter table public.hypotheses add column if not exists status_notat text not null default '';
 alter table public.hypotheses add column if not exists status_endret timestamptz;
 alter table public.hypotheses add column if not exists status_av uuid references public.participants(id);
+alter table public.hypotheses add column if not exists publisert boolean not null default true;
+
+-- Kladd har ikke nummer. Nummeret er den felles referansen i møtet, og skal
+-- ikke brukes opp av noe de andre ikke kan se.
+alter table public.hypotheses alter column nr drop not null;
+create index if not exists hypotheses_kladd_idx
+  on public.hypotheses (workshop_id, created_by) where not publisert;
 
 alter table public.hypotheses drop constraint if exists hypotheses_kilde_check;
 alter table public.hypotheses add  constraint hypotheses_kilde_check check (char_length(kilde) <= 300);
@@ -87,7 +94,7 @@ begin
       from pg_proc p join pg_namespace n on n.oid = p.pronamespace
      where (n.nspname = 'public'  and p.proname in
              ('join_workshop','get_board','add_hypothesis','update_hypothesis',
-              'delete_hypothesis','rate_hypothesis'))
+              'delete_hypothesis','rate_hypothesis','publish_hypothesis'))
         or (n.nspname = 'private' and p.proname in
              ('workshop_by_code','participant_ok','parse_frist'))
   loop
@@ -149,11 +156,17 @@ begin
   return json_build_object('participant_id', v_pid, 'token', v_token, 'workshop', v_name);
 end $$;
 
-create function public.get_board(p_code text)
+-- Kladd er personlig, så tavla må vite hvem som spør. Deltakerparametrene er
+-- valgfrie: uten dem svarer funksjonen som før, med bare det publiserte.
+create function public.get_board(p_code text, p_pid uuid default null, p_token text default null)
 returns json language plpgsql stable security definer set search_path = '' as $$
-declare v_ws uuid;
+declare v_ws uuid; v_me uuid;
 begin
   v_ws := private.workshop_by_code(p_code);
+  if p_pid is not null then
+    perform private.participant_ok(v_ws, p_pid, p_token);
+    v_me := p_pid;
+  end if;
   return json_build_object(
     'workshop', (select name from public.workshops where id = v_ws),
     'hypotheses', coalesce((
@@ -165,12 +178,14 @@ begin
         'status_notat', h.status_notat,
         'status_endret', to_char(h.status_endret, 'YYYY-MM-DD'),
         'status_av', sp.name,
+        'publisert', h.publisert,
         'by', p.name, 'by_id', h.created_by,
-        'created_at', h.created_at) order by h.nr)
+        'created_at', h.created_at) order by h.publisert desc, h.nr, h.created_at)
       from public.hypotheses h
       left join public.participants p  on p.id  = h.created_by
       left join public.participants sp on sp.id = h.status_av
-      where h.workshop_id = v_ws and h.deleted_at is null), '[]'::json),
+      where h.workshop_id = v_ws and h.deleted_at is null
+        and (h.publisert or h.created_by = v_me)), '[]'::json),
     'ratings', coalesce((
       select json_agg(json_build_object('h', r.hypothesis_id, 'p', r.participant_id, 'k', r.k, 'u', r.u))
       from public.ratings r join public.hypotheses h on h.id = r.hypothesis_id
@@ -180,21 +195,51 @@ end $$;
 
 create function public.add_hypothesis(p_code text, p_pid uuid, p_token text,
   p_tekst text, p_kriterium text, p_type text, p_kilde text default '',
-  p_eier text default '', p_frist text default null)
+  p_eier text default '', p_frist text default null, p_publisert boolean default true)
 returns json language plpgsql volatile security definer set search_path = '' as $$
 declare v_ws uuid; v_nr int; v_id uuid;
 begin
   v_ws := private.workshop_by_code(p_code);
   perform private.participant_ok(v_ws, p_pid, p_token);
-  perform 1 from public.workshops where id = v_ws for update;  -- serialiserer nummerering
-  select coalesce(max(nr), 0) + 1 into v_nr from public.hypotheses where workshop_id = v_ws;
-  insert into public.hypotheses (workshop_id, nr, tekst, kriterium, type, kilde, eier, frist, created_by)
+  if coalesce(p_publisert, true) then
+    perform 1 from public.workshops where id = v_ws for update;  -- serialiserer nummerering
+    select coalesce(max(nr), 0) + 1 into v_nr from public.hypotheses where workshop_id = v_ws;
+  end if;
+  insert into public.hypotheses (workshop_id, nr, tekst, kriterium, type, kilde, eier, frist,
+                                 created_by, publisert)
   values (v_ws, v_nr, btrim(p_tekst), coalesce(btrim(p_kriterium), ''), p_type,
           left(coalesce(btrim(p_kilde), ''), 300),
           left(coalesce(btrim(p_eier), ''), 200),
-          private.parse_frist(p_frist), p_pid)
+          private.parse_frist(p_frist), p_pid, coalesce(p_publisert, true))
   returning id into v_id;
   return json_build_object('id', v_id, 'nr', v_nr);
+end $$;
+
+create function public.publish_hypothesis(p_code text, p_pid uuid, p_token text, p_id uuid)
+returns json language plpgsql volatile security definer set search_path = '' as $$
+declare v_ws uuid; v_nr int; v_eier uuid; v_pub boolean; v_tekst text;
+begin
+  v_ws := private.workshop_by_code(p_code);
+  perform private.participant_ok(v_ws, p_pid, p_token);
+  select created_by, publisert, tekst into v_eier, v_pub, v_tekst
+    from public.hypotheses where id = p_id and workshop_id = v_ws and deleted_at is null;
+  if not found then
+    raise exception 'Hypotesen finnes ikke' using errcode = 'P0002';
+  end if;
+  if v_eier is distinct from p_pid then
+    raise exception 'Du kan bare publisere dine egne kladder' using errcode = '42501';
+  end if;
+  if v_pub then
+    return json_build_object('id', p_id, 'nr', (select nr from public.hypotheses where id = p_id));
+  end if;
+  if btrim(coalesce(v_tekst, '')) = '' then
+    raise exception 'Hypotesen kan ikke være tom' using errcode = '23514';
+  end if;
+  perform 1 from public.workshops where id = v_ws for update;
+  select coalesce(max(nr), 0) + 1 into v_nr from public.hypotheses where workshop_id = v_ws;
+  update public.hypotheses set nr = v_nr, publisert = true, updated_at = now()
+   where id = p_id;
+  return json_build_object('id', p_id, 'nr', v_nr);
 end $$;
 
 create function public.update_hypothesis(p_code text, p_pid uuid, p_token text, p_id uuid,
@@ -204,14 +249,21 @@ create function public.update_hypothesis(p_code text, p_pid uuid, p_token text, 
   p_status_notat text default null)
 returns void language plpgsql volatile security definer set search_path = '' as $$
 declare v_ws uuid; v_naa text; v_ny text; v_notat text; v_endret boolean;
+        v_pub boolean; v_av uuid;
 begin
   v_ws := private.workshop_by_code(p_code);
   perform private.participant_ok(v_ws, p_pid, p_token);
 
-  select status into v_naa from public.hypotheses
-  where id = p_id and workshop_id = v_ws and deleted_at is null;
+  select status, publisert, created_by into v_naa, v_pub, v_av
+    from public.hypotheses
+   where id = p_id and workshop_id = v_ws and deleted_at is null;
   if not found then
     raise exception 'Hypotesen finnes ikke' using errcode = 'P0002';
+  end if;
+  -- En kladd tilhører den som skriver den. Den er usynlig for andre, så dette
+  -- er et vern mot et kall som går utenom klienten, ikke mot et feiltrykk.
+  if not v_pub and v_av is distinct from p_pid then
+    raise exception 'Kladden tilhører noen andre' using errcode = '42501';
   end if;
 
   v_ny     := coalesce(p_status, v_naa);
@@ -244,15 +296,27 @@ begin
   where id = p_id and workshop_id = v_ws and deleted_at is null;
 end $$;
 
+-- Sletting er nå eierens egen. Hypoteser fra deltakere som er borte (created_by
+-- blir null når en deltaker fjernes) kan ingen slette lenger — det er med vilje,
+-- siden alternativet er at hvem som helst kan rydde i andres grunnlag.
 create function public.delete_hypothesis(p_code text, p_pid uuid, p_token text, p_id uuid)
 returns void language plpgsql volatile security definer set search_path = '' as $$
-declare v_ws uuid;
+declare v_ws uuid; v_av uuid;
 begin
   v_ws := private.workshop_by_code(p_code);
   perform private.participant_ok(v_ws, p_pid, p_token);
+  select created_by into v_av from public.hypotheses
+   where id = p_id and workshop_id = v_ws and deleted_at is null;
+  if not found then
+    raise exception 'Hypotesen finnes ikke' using errcode = 'P0002';
+  end if;
+  if v_av is distinct from p_pid then
+    raise exception 'Du kan bare slette hypoteser du har lagt inn selv' using errcode = '42501';
+  end if;
   update public.hypotheses set deleted_at = now(), updated_at = now()
   where id = p_id and workshop_id = v_ws and deleted_at is null;
 end $$;
+
 
 create function public.rate_hypothesis(p_code text, p_pid uuid, p_token text, p_id uuid,
   p_k smallint, p_u smallint)
@@ -261,7 +325,10 @@ declare v_ws uuid;
 begin
   v_ws := private.workshop_by_code(p_code);
   perform private.participant_ok(v_ws, p_pid, p_token);
-  if not exists (select 1 from public.hypotheses where id = p_id and workshop_id = v_ws and deleted_at is null) then
+  -- Kladd kan ikke vurderes, heller ikke av den som eier den: snittet skal
+  -- starte først når alle ser den samme teksten.
+  if not exists (select 1 from public.hypotheses
+                  where id = p_id and workshop_id = v_ws and deleted_at is null and publisert) then
     raise exception 'Hypotesen finnes ikke' using errcode = 'P0002';
   end if;
   if p_k is null and p_u is null then
@@ -276,15 +343,17 @@ end $$;
 
 -- ---------- rettigheter ----------
 revoke all on function public.join_workshop(text,text) from public;
-revoke all on function public.get_board(text) from public;
-revoke all on function public.add_hypothesis(text,uuid,text,text,text,text,text,text,text) from public;
+revoke all on function public.get_board(text,uuid,text) from public;
+revoke all on function public.add_hypothesis(text,uuid,text,text,text,text,text,text,text,boolean) from public;
+revoke all on function public.publish_hypothesis(text,uuid,text,uuid) from public;
 revoke all on function public.update_hypothesis(text,uuid,text,uuid,text,text,text,text,text,text,text,text) from public;
 revoke all on function public.delete_hypothesis(text,uuid,text,uuid) from public;
 revoke all on function public.rate_hypothesis(text,uuid,text,uuid,smallint,smallint) from public;
 
 grant execute on function public.join_workshop(text,text) to anon, authenticated;
-grant execute on function public.get_board(text) to anon, authenticated;
-grant execute on function public.add_hypothesis(text,uuid,text,text,text,text,text,text,text) to anon, authenticated;
+grant execute on function public.get_board(text,uuid,text) to anon, authenticated;
+grant execute on function public.add_hypothesis(text,uuid,text,text,text,text,text,text,text,boolean) to anon, authenticated;
+grant execute on function public.publish_hypothesis(text,uuid,text,uuid) to anon, authenticated;
 grant execute on function public.update_hypothesis(text,uuid,text,uuid,text,text,text,text,text,text,text,text) to anon, authenticated;
 grant execute on function public.delete_hypothesis(text,uuid,text,uuid) to anon, authenticated;
 grant execute on function public.rate_hypothesis(text,uuid,text,uuid,smallint,smallint) to anon, authenticated;

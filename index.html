@@ -93,6 +93,15 @@ select.sort{border:1px solid var(--line);background:var(--surface);border-radius
 /* ---------- skjema ---------- */
 .compose{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:grid;gap:12px;margin-bottom:16px}
 .compose h2{font-size:17px;margin:0}
+/* Kladd er din egen arbeidsbenk: stiplet ramme skiller den fra det de andre
+   ser, uten å rope. Bakgrunnen er den samme flaten som de andre kortene —
+   gjennomsiktig ville latt sidebakgrunnen skinne gjennom, og da leses kortet
+   som et hull i lista i stedet for som et kort. */
+.kladd-topp{margin:4px 0 10px}
+.kladd-topp h3{font-size:15px;margin:0 0 2px}
+.card.erkladd{border-style:dashed;border-left-style:solid}
+.card.erkladd .nr.kladd{background:var(--sunk);color:var(--muted);letter-spacing:.02em}
+.liten{padding:4px 10px;font-size:13px}
 .field{display:grid;gap:4px;min-width:0}
 .field label{font-size:13px;font-weight:600}
 .field .pre{font-family:var(--f-display);font-weight:600;color:var(--muted)}
@@ -360,8 +369,9 @@ body.scene header.top{min-height:52px}
               <input id="f-kilde" maxlength="300" placeholder="docs/forprosjekt/… eller referat #3">
             </div>
             <button class="primary" id="f-add" type="submit">Legg til</button>
+            <button class="linkbtn" id="f-kladd" type="button">Lagre som kladd</button>
           </div>
-          <p class="help">Frist settes når hypotesen er prioritert. <button type="button" class="linkbtn" id="bulk-toggle">Lim inn flere på én gang</button></p>
+          <p class="help">Frist settes når hypotesen er prioritert. En kladd ser bare du, til du publiserer den. <button type="button" class="linkbtn" id="bulk-toggle">Lim inn flere på én gang</button></p>
           <div id="bulk" hidden class="field">
             <label for="f-bulk">Én hypotese per linje. Skill kriteriet med | om dere har det.</label>
             <textarea id="f-bulk" rows="5" placeholder="KraftCERT vil drifte tillitsankeret | KraftCERT bekrefter rolle og ressurser skriftlig&#10;Ett selskap kan pilotere uten anskaffelse"></textarea>
@@ -450,6 +460,10 @@ const SKEY = "nordlys-hyp-session";
 
 let session=null;            // {code,pid,token,name,workshop}
 let hyps=[], rates={}, myRates={}, pendingRate=new Set();
+/* Egne kladder holdes utenfor `hyps`. Alt annet i appen — snitt, filtre,
+   matrise, tellinger — regner på det publiserte, og en halvtenkt hypotese
+   skal ikke påvirke noen av delene. */
+let kladder=[];
 let filter="alle", sort="nr", query="", selected=null, editing=null, confirmDel=null;
 /* Satt mens noen er i ferd med å sette avklart status og skal skrive belegget.
    {id, status} — statusen er ikke lagret ennå. */
@@ -658,25 +672,37 @@ function renderList(){
   const L=$("list");
   const fk=document.activeElement&&document.activeElement.dataset?document.activeElement.dataset.fk:null;
   const list=hyps.length?visible():[];
-  L.replaceChildren(...(list.length?list.map(card):[emptyState()]));
+  /* Kladdene står alltid øverst, uavhengig av filter og søk. De er din egen
+     arbeidsbenk, og skal ikke kunne bli borte bak et filter du glemte at du
+     satte. */
+  const kladdblokk = kladder.length ? [
+    h("div",{class:"kladd-topp"},
+      h("h3",{},kladder.length===1?"Din kladd":`Dine ${kladder.length} kladder`),
+      h("p",{class:"help"},"Bare du ser disse. De får nummer og kan vurderes av de andre først når du publiserer.")),
+    ...kladder.map(card)] : [];
+  L.replaceChildren(...kladdblokk, ...(list.length?list.map(card):(kladder.length?[]:[emptyState()])));
   /* Lista bygges på nytt hvert poll. Uten dette mister du fokus midt i en
      vurdering hvert fjerde sekund. */
   if(fk){ const back=L.querySelector(`[data-fk="${CSS.escape(fk)}"]`); if(back) back.focus(); }
 }
 function card(x){
   const s=statsFor(x.id);
+  const kladd = x.publisert===false;
+  /* Sletting er eierens egen. Databasen avviser andres uansett, så knappen
+     skjules for å slippe å måtte svare på hvorfor den ikke virker. */
+  const min = x.by_id && session && x.by_id===session.pid;
   const head=h("div",{class:"card-head"},
-    h("span",{class:"nr"},nr(x.nr)),
+    kladd?h("span",{class:"nr kladd"},"Kladd"):h("span",{class:"nr"},nr(x.nr)),
     h("span",{class:"type",style:`color:${tcolor(x.type)}`},TYPES[x.type]?.label||"Verdi"),
-    s.first?h("span",{class:"badge q"},"Må avklares"):null,
-    s.split?h("span",{class:"badge w",title:"Vurderingene spriker med 3 eller mer. Ta diskusjonen."},"Uenige"):null,
+    kladd?null:s.first?h("span",{class:"badge q"},"Må avklares"):null,
+    kladd?null:s.split?h("span",{class:"badge w",title:"Vurderingene spriker med 3 eller mer. Ta diskusjonen."},"Uenige"):null,
     s.first&&!x.eier?h("span",{class:"badge w"},"Mangler eier"):null,
     x.status==="avkreftet"?h("span",{class:"badge w"},"Avkreftet"):null,
     erAvklart(x)&&!x.status_notat?h("span",{class:"badge w",title:"Statusen ble satt før belegg ble påkrevd. Sett den på nytt for å dokumentere hva som avgjorde det."},"Mangler belegg"):null,
     utkast[x.id]?h("span",{class:"badge w"},"Ikke bekreftet"):null,
     h("span",{class:"spacer"}),
-    ferdigVurdert(x)?h("span",{class:"mine"},"Vurdert"):null,
-    h("select",{class:"status","aria-label":"Status","data-fk":`s:${x.id}`,
+    kladd?null:ferdigVurdert(x)?h("span",{class:"mine"},"Vurdert"):null,
+    kladd?null:h("select",{class:"status","aria-label":"Status","data-fk":`s:${x.id}`,
       onchange:e=>{
         const ny=e.target.value;
         if(ny===(x.status||"ny")) return;
@@ -744,21 +770,22 @@ function card(x){
       x.kriterium?h("p",{class:"crit"},h("span",{class:"pre"},"Vi vet det når "),x.kriterium)
                  :h("p",{class:"crit empty"},"Mangler kriterium for når vi vet det."),
       meta.length?h("div",{class:"meta"},meta):null,
-      h("div",{class:"rate"},
+      kladd?null:h("div",{class:"rate"},
         h("div",{class:"scale",title:"Hvor ille er det for anbefalingen hvis dette er feil? 1 = merkes ikke, 10 = konseptet faller"},
           h("span",{class:"lbl"},"Kritisk"),seg(x.id,"k"),h("span",{class:"ends"},"1 merkes ikke → 10 faller")),
         h("div",{class:"scale",title:"Hvor lite vet vi om dette i dag? 1 = godt dokumentert, 10 = rent gjetning"},
           h("span",{class:"lbl"},"Usikker"),seg(x.id,"u"),h("span",{class:"ends"},"1 dokumentert → 10 gjetning")),
         h("span",{class:"avg"+(bump?" bump":"")},"Snitt ",h("b",{},fmt(s.k))," / ",h("b",{},fmt(s.u))," · ",s.n," ",s.n===1?"vurdering":"vurderinger")),
       h("div",{class:"actions"},
-        h("button",{class:"linkbtn",type:"button",onclick:()=>{selected=x.id;render();}},"Vis i matrisen"),
+        kladd?null:h("button",{class:"linkbtn",type:"button",onclick:()=>{selected=x.id;render();}},"Vis i matrisen"),
         h("button",{class:"linkbtn",type:"button",onclick:()=>{editing=x.id;confirmDel=null;render();}},"Rediger"),
-        h("button",{class:"linkbtn danger",type:"button",onclick:()=>{
+        kladd?h("button",{class:"primary liten",type:"button",onclick:()=>publiser(x.id)},"Publiser"):null,
+        min?h("button",{class:"linkbtn danger",type:"button",onclick:()=>{
           if(confirmDel===x.id){ confirmDel=null; del(x.id); }
           else { confirmDel=x.id; render(); setTimeout(()=>{ if(confirmDel===x.id){confirmDel=null;render();} },4000); }
-        }}, confirmDel===x.id?"Trykk igjen for å slette":"Slett"))];
+        }}, confirmDel===x.id?"Trykk igjen for å slette":(kladd?"Forkast":"Slett")):null)];
   }
-  return h("article",{class:"card"+(selected===x.id?" sel":"")+(statsFor(x.id).first?" first":""),id:"c-"+x.id},head,statusForm,...body);
+  return h("article",{class:"card"+(kladd?" erkladd":"")+(selected===x.id?" sel":"")+(!kladd&&s.first?" first":""),id:"c-"+x.id},head,statusForm,...body);
 }
 const avgKey = s => `${s.k==null?"":s.k.toFixed(2)}|${s.u==null?"":s.u.toFixed(2)}|${s.n}`;
 
@@ -1139,8 +1166,12 @@ function tickLive(){
 async function refresh(){
   if(!session) return;
   try{
-    const b=await rpc("get_board",{p_code:session.code});
-    const nextHyps=b.hypotheses||[];
+    /* Deltakeren må identifisere seg for å få med sine egne kladder. Uten
+       p_pid svarer get_board bare med det publiserte. */
+    const b=await rpc("get_board",{p_code:session.code,p_pid:session.pid,p_token:session.token});
+    const alle=b.hypotheses||[];
+    const nextHyps=alle.filter(x=>x.publisert!==false);
+    const nextKladd=alle.filter(x=>x.publisert===false);
     const nextRates={};
     for(const r of b.ratings||[]){ (nextRates[r.p] ||= {})[r.h]={k:r.k,u:r.u}; }
     lastSync=Date.now(); setLive(true); loaded=true;
@@ -1148,15 +1179,16 @@ async function refresh(){
 
     /* Hopp over rendering når ingenting er endret. Ellers bygges hele lista på
        nytt hvert fjerde sekund, med flimmer og tapt fokus som resultat. */
-    const sig=JSON.stringify([nextHyps,nextRates]);
+    const sig=JSON.stringify([nextHyps,nextKladd,nextRates]);
     if(sig===lastSig && !pendingRate.size) return;
     lastSig=sig;
 
-    hyps=nextHyps; rates=nextRates;
+    hyps=nextHyps; kladder=nextKladd; rates=nextRates;
     const mine={...(nextRates[session.pid]||{})};
     for(const id of pendingRate){ if(myRates[id]) mine[id]=myRates[id]; else delete mine[id]; }
     myRates=mine;
     if(selected&&!hyps.some(x=>x.id===selected)) selected=null;
+    if(editing&&!alle.some(x=>x.id===editing)) editing=null;
     render();
   }catch(e){
     if(e.code==="28000"){ handleErr(e); return; }
@@ -1174,9 +1206,15 @@ function stopPolling(){ if(pollTimer) clearInterval(pollTimer); if(tickTimer) cl
 document.addEventListener("visibilitychange",()=>{ if(!document.hidden&&session) refresh(); });
 
 /* ---------- skriving ---------- */
-async function addHyp(tekst,kriterium,type,kilde,eier){
+async function addHyp(tekst,kriterium,type,kilde,eier,publisert=true){
   await rpc("add_hypothesis",{...auth(),p_tekst:tekst,p_kriterium:kriterium,p_type:type,
-    p_kilde:kilde||"",p_eier:eier||""});
+    p_kilde:kilde||"",p_eier:eier||"",p_publisert:publisert});
+}
+async function publiser(id){
+  try{
+    const r=await rpc("publish_hypothesis",{...auth(),p_id:id});
+    editing=null; toast("Publisert som "+nr(r.nr)); lastSig=null; await refresh();
+  }catch(e){ handleErr(e); }
 }
 async function save(id,patch){
   try{ await rpc("update_hypothesis",{...auth(),p_id:id,...patch}); skrivingOk(); lastSig=null; await refresh(); }catch(e){ handleErr(e); }
@@ -1206,16 +1244,17 @@ $("compose-toggle").addEventListener("click",()=>{
   $("compose-toggle").setAttribute("aria-expanded",String(!f.hidden));
   if(!f.hidden) $("f-tekst").focus();
 });
-$("compose").addEventListener("submit",async e=>{
-  e.preventDefault();
+async function lagreSkjema(publisert){
   const tekst=$("f-tekst").value.trim(); if(!tekst){ $("f-tekst").focus(); return; }
-  $("f-add").disabled=true;
-  try{ await addHyp(tekst,$("f-krit").value.trim(),valgtType("f-type"),$("f-kilde").value.trim(),$("f-eier").value);
+  $("f-add").disabled=true; $("f-kladd").disabled=true;
+  try{ await addHyp(tekst,$("f-krit").value.trim(),valgtType("f-type"),$("f-kilde").value.trim(),$("f-eier").value,publisert);
     $("f-tekst").value=""; $("f-krit").value=""; $("f-kilde").value=""; $("f-tekst").focus();
-    toast("Lagt til"); lastSig=null; refresh();
+    toast(publisert?"Lagt til":"Lagret som kladd"); lastSig=null; refresh();
   }catch(err){ handleErr(err); }
-  $("f-add").disabled=false;
-});
+  $("f-add").disabled=false; $("f-kladd").disabled=false;
+}
+$("compose").addEventListener("submit",e=>{ e.preventDefault(); lagreSkjema(true); });
+$("f-kladd").addEventListener("click",()=>lagreSkjema(false));
 $("bulk-toggle").addEventListener("click",()=>{ $("bulk").hidden=!$("bulk").hidden; });
 $("bulk-add").addEventListener("click",async()=>{
   const lines=$("f-bulk").value.split("\n").map(l=>l.trim()).filter(Boolean);
