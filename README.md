@@ -68,13 +68,13 @@ beslutning — se hvor mange som havner der før dere lover å teste alle.
 
 ## Slik fungerer tilgangen
 
-- Ingen brukerkontoer. Deltakerne skriver inn en felles **workshopkode** og navnet sitt.
+- Ingen brukerkontoer. Deltakerne skriver inn en felles **passkode** og navnet sitt.
 - Alle tabeller har RLS slått på uten policies, så de kan ikke leses eller endres direkte via API-et.
 - All tilgang går gjennom seks databasefunksjoner (`get_board`, `join_workshop`, `add_hypothesis`,
-  `update_hypothesis`, `delete_hypothesis`, `rate_hypothesis`). Alle krever workshopkoden.
+  `update_hypothesis`, `delete_hypothesis`, `rate_hypothesis`). Alle krever passkoden.
 - Ved innlogging får hver deltaker et tilfeldig token som lagres i nettleseren. Skriving krever
   token, så ingen kan endre andres vurderinger.
-- Workshopkoden lagres bare som bcrypt-hash i databasen.
+- Passkoden lagres bare som bcrypt-hash i databasen.
 - Supabase-rådgiveren melder at funksjonene er `SECURITY DEFINER` og kan kalles anonymt.
   Det er tilsiktet: funksjonene er selve tilgangskontrollen.
 
@@ -84,15 +84,15 @@ beslutning — se hvor mange som havner der før dere lover å teste alle.
 
 1. Legg filene i et repo.
 2. Settings → Pages → Deploy from a branch → `main` / `(root)`.
-3. Del adressen og workshopkoden med deltakerne. Ikke legg koden i repoet.
+3. Del adressen og passkoden med deltakerne. Ikke legg koden i repoet.
 
-## Ny workshop eller ny kode
+## Ny workshop eller ny passkode
 
 ### Bytte kode
 
 ```sh
-./supabase/ny_kode.sh              # foreslår koder
-./supabase/ny_kode.sh ABC-234      # setter den
+./supabase/ny_kode.sh              # foreslår koder på formatet XXXX-XXXX
+./supabase/ny_kode.sh ABCD-2345    # setter den
 ```
 
 Skriptet gjør koden om til store bokstaver før den hashes. Det er ikke kosmetikk:
@@ -108,11 +108,11 @@ prosjekt-URL-en ligger offentlig i `config.js`:
 | Et ord som NORDLYS | 1 | umiddelbart |
 | 4 tegn | 1 mill. | 35 minutter |
 | 5 tegn | 34 mill. | 9 timer |
-| **6 tegn** | **1,1 mrd.** | **12 dager** |
-| 8 tegn | 1,1 bill. | 35 år |
+| 6 tegn | 1,1 mrd. | 12 dager |
+| **8 tegn (XXXX-XXXX)** | **1,1 bill.** | **35 år** |
 
-Skriptet nekter koder under seks tegn og bruker et alfabet uten I, O, 0 og 1, slik at koden
-kan leses opp uten at noen skriver feil.
+Skriptet lager koder på formatet `XXXX-XXXX`, nekter koder under seks tegn, og bruker et
+alfabet uten I, O, 0 og 1 slik at koden kan leses opp uten at noen skriver feil.
 
 Å øke bcrypt-kostnaden er ikke gratis her: `workshop_by_code` kjører ved **hvert** RPC-kall,
 også hver `get_board` fra pollingen. Seksten deltakere som poller hvert fjerde sekund gir
@@ -159,7 +159,7 @@ GitHub Pages krever offentlig repo. Migrasjonene som inneholder selve hypotesene
 rundt 64 setninger som beskriver hvilke deler av Nordlys som er uverifisert, og samlet er
 det et kart over svakhetene i et kraftsektorinitiativ.
 
-Repoet inneholder **verktøyet**. Dataene ligger i Supabase, bak workshopkoden. Filene ligger
+Repoet inneholder **verktøyet**. Dataene ligger i Supabase, bak passkoden. Filene ligger
 lokalt hos den som kjører migrasjonene, og må deles på annen måte enn gjennom dette repoet.
 
 Den som kloner repoet får et fullt fungerende skjema gjennom `supabase/reparer.sql`, men et
@@ -222,7 +222,7 @@ kritikalitet.
 - `supabase/reparer.sql` – bringer skjemaet i riktig tilstand uansett utgangspunkt
 - `supabase/sjekk_status.sql` – viser hvilke migrasjoner som er anvendt, endrer ingenting
 - `supabase/kjor.sh` – kjører de to over mot Supabase via docker
-- `supabase/ny_kode.sh` – setter ny workshopkode
+- `supabase/ny_kode.sh` – setter ny passkode
 
 Migrasjoner kjøres med Supabase CLI (`supabase db push`), ikke ved å lime inn i SQL Editor.
 Se `AGENTS.md` for rekkefølge og fallgruver — migrasjonshistorikken i fjernbasen er ikke i

@@ -106,7 +106,7 @@ begin
    where w.code_hash = extensions.crypt(upper(btrim(coalesce(p_code,''))), w.code_hash)
    limit 1;
   if v_id is null then
-    raise exception 'Ugyldig workshopkode' using errcode = '28000';
+    raise exception 'Ugyldig passkode' using errcode = '28000';
   end if;
   return v_id;
 end $$;

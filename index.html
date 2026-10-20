@@ -309,8 +309,8 @@ body.scene header.top{min-height:52px}
     <form class="login" id="login" autocomplete="off">
       <h2>Bli med i workshopen</h2>
       <div class="field">
-        <label for="l-code">Workshopkode</label>
-        <input id="l-code" required placeholder="NORDLYS-XXXX-XXXX" autocapitalize="characters" spellcheck="false">
+        <label for="l-code">Passkode</label>
+        <input id="l-code" required placeholder="XXXX-XXXX" autocapitalize="characters" spellcheck="false">
       </div>
       <div class="field">
         <label for="l-name">Navnet ditt</label>
@@ -1245,7 +1245,7 @@ $("login").addEventListener("submit",async e=>{
     session={code,pid:r.participant_id,token:r.token,name,workshop:r.workshop};
     store(false,session); enter();
   }catch(err){
-    $("l-err").textContent = err.code==="28000" ? "Feil workshopkode. Sjekk koden og prøv igjen." : "Fikk ikke kontakt med serveren. Prøv igjen.";
+    $("l-err").textContent = err.code==="28000" ? "Feil passkode. Sjekk koden og prøv igjen." : "Fikk ikke kontakt med serveren. Prøv igjen.";
     $("l-err").hidden=false;
   }
   $("l-go").disabled=false;

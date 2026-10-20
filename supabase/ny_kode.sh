@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Setter ny workshopkode.
+# Setter ny passkode for workshopen.
 #
-#   ./supabase/ny_kode.sh              foreslår koder
-#   ./supabase/ny_kode.sh ABC-123      setter den koden
+#   ./supabase/ny_kode.sh              foreslår koder på formatet XXXX-XXXX
+#   ./supabase/ny_kode.sh ABCD-2345    setter den koden
 #
 # Koden lagres bare som bcrypt-hash. Den skrives aldri til disk her, og den
 # finnes ingen steder i repoet etterpå – du må notere den selv.
@@ -26,17 +26,17 @@ lag_kode() {
   python3 - "$ALFABET" <<'PY'
 import secrets, sys
 a = sys.argv[1]
-print("-".join("".join(secrets.choice(a) for _ in range(3)) for _ in range(2)))
+print("-".join("".join(secrets.choice(a) for _ in range(4)) for _ in range(2)))
 PY
 }
 
 if [ $# -eq 0 ]; then
-  echo "Forslag til kode – seks tegn, uten I, O, 0 og 1:"
+  echo "Forslag til kode – formatet XXXX-XXXX, uten I, O, 0 og 1:"
   echo ""
   for i in 1 2 3 4 5; do echo "    $(lag_kode)"; done
   echo ""
-  echo "Sett en av dem:   ./supabase/ny_kode.sh ABC-234"
-  echo "Eller din egen:   ./supabase/ny_kode.sh DIN-KODE"
+  echo "Sett en av dem:   ./supabase/ny_kode.sh ABCD-2345"
+  echo "Eller din egen:   ./supabase/ny_kode.sh XXXX-XXXX"
   exit 0
 fi
 
