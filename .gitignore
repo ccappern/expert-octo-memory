@@ -1,0 +1,30 @@
+# macOS
+.DS_Store
+
+# Supabase CLI-tilstand (inneholder prosjekt- og tilkoblingsdetaljer)
+supabase/.temp/
+
+# Tilkoblingsstreng til databasen, se supabase/kjor.sh
+.nordlys-db
+
+# ---------------------------------------------------------------------------
+# Hypotesetekstene publiseres IKKE.
+#
+# Dette repoet er offentlig, fordi GitHub Pages krever det. Migrasjonene under
+# inneholder til sammen rundt 64 setninger som beskriver hvilke deler av
+# Nordlys som er uverifisert: at TLP-håndheving ikke er testet, at det ikke
+# finnes en juridisk enhet, at NVE ikke er kontaktet, at det ikke finnes en
+# plan B dersom KraftCERT takker nei. Samlet er det et kart over svakhetene i
+# et kraftsektorinitiativ, og det er ikke klarert for offentliggjøring.
+#
+# Innholdet ligger i Supabase, bak workshopkoden. Filene ligger lokalt hos den
+# som kjører migrasjonene. Repoet inneholder verktøyet, ikke dataene.
+#
+# Er dette feil vurdering, fjern linjene under og kjør:
+#   git add -f supabase/migrations/000{3,5,6,8}*.sql
+# Men gjør det før første push – etter det ligger teksten i historikken.
+# ---------------------------------------------------------------------------
+supabase/migrations/0003_seed_forprosjekt.sql
+supabase/migrations/0005_rydd_typer.sql
+supabase/migrations/0006_tilpasningsevne.sql
+supabase/migrations/0008_fire_typer.sql
