@@ -44,6 +44,10 @@ h1{font-size:19px;font-weight:700;margin:0;letter-spacing:-.01em;white-space:now
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .top-actions{margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .me{font-size:13px;color:var(--muted);max-width:22ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* Navnet er en knapp nå, men skal ikke se ut som en handling man må gjøre —
+   bare som noe man kan rette hvis det er feil. */
+button.me{border:0;background:none;cursor:pointer;padding:0;font:inherit;font-size:13px}
+button.me:hover{color:var(--ink);text-decoration:underline}
 button.ghost{background:none;border:1px solid transparent;border-radius:8px;padding:6px 10px;cursor:pointer;color:var(--muted);font-size:13px}
 button.ghost:hover{background:var(--sunk);color:var(--ink)}
 button.primary{background:var(--accent);color:var(--accent-ink);border:0;border-radius:8px;padding:8px 14px;cursor:pointer;font-weight:600}
@@ -122,6 +126,10 @@ select.sort{border:1px solid var(--line);background:var(--surface);border-radius
 .row{display:flex;flex-wrap:wrap;gap:10px;align-items:end}
 .row .field{flex:1 1 180px}
 .help{font-size:13px;color:var(--muted);margin:0}
+/* Søppelpostvarselet må leses FØR man gir opp og lukker fanen, så det er
+   markert i stedet for å ligge som enda en grå hjelpetekst. */
+.help.spam{background:var(--warnbg);color:var(--ink);border-radius:8px;padding:10px 12px;line-height:1.5}
+.help.spam code{font-size:12.5px;background:var(--surface);padding:1px 5px;border-radius:4px}
 .linkbtn{background:none;border:0;padding:0;color:var(--accent);cursor:pointer;font-size:13px;text-align:left}
 .linkbtn:hover{text-decoration:underline}
 .linkbtn.danger{color:var(--bad)}
@@ -312,7 +320,7 @@ body.scene header.top{min-height:52px}
   </div>
   <div class="top-actions" id="nav" hidden>
     <span class="live" id="live"><span class="dot"></span><span id="live-t"></span></span>
-    <span class="me" id="me-name"></span>
+    <button class="me" id="me-name" type="button" title="Klikk for å rette navnet ditt"></button>
     <button class="ghost" id="scene">Storskjerm</button>
     <button class="ghost" id="exp-md">Eksporter .md</button>
     <button class="ghost" id="exp-csv">.csv</button>
@@ -325,18 +333,31 @@ body.scene header.top{min-height:52px}
 
   <section id="view-login">
     <form class="login" id="login" autocomplete="off">
-      <h2>Bli med i workshopen</h2>
-      <div class="field">
-        <label for="l-code">Passkode</label>
-        <input id="l-code" required placeholder="XXXX-XXXX" autocapitalize="characters" spellcheck="false">
+      <h2>Logg inn</h2>
+      <div class="field" id="steg-epost">
+        <label for="l-epost">E-postadressen din</label>
+        <input id="l-epost" type="email" required autocomplete="email" spellcheck="false"
+               placeholder="fornavn.etternavn@selskap.no">
       </div>
-      <div class="field">
-        <label for="l-name">Navnet ditt</label>
-        <input id="l-name" required maxlength="60" placeholder="Fornavn og organisasjon" autocomplete="name">
+      <div class="field" id="steg-kode" hidden>
+        <label for="l-kode">Koden fra e-posten</label>
+        <input id="l-kode" inputmode="numeric" autocomplete="one-time-code" maxlength="8"
+               spellcheck="false" placeholder="8 siffer">
+        <p class="help" id="l-sendt"></p>
+        <p class="help spam"><strong>Finner du den ikke? Sjekk søppelpost.</strong>
+          Avsenderen er <code>noreply@n0rdlys.no</code>, et nytt domene uten sendehistorikk,
+          så e-posten havner ofte der første gang. Søk på «Innloggingskode».
+          Marker den gjerne som «ikke søppelpost», så kommer de neste fram.</p>
+        <p class="help">Skal du bruke både PC og mobil? Logg inn på én enhet av gangen og
+          be om en ny kode på den neste. Du forblir innlogget på begge.</p>
       </div>
-      <button class="primary" id="l-go" type="submit">Bli med</button>
+      <button class="primary" id="l-go" type="submit">Send meg kode</button>
+      <button class="linkbtn" id="l-harkode" type="button" hidden>Jeg har allerede en kode</button>
+      <button class="linkbtn" id="l-nykode" type="button" hidden>Send meg en ny kode</button>
+      <button class="linkbtn" id="l-bytt" type="button" hidden>Bytt e-postadresse</button>
       <p class="err" id="l-err" hidden></p>
-      <p class="help">Navnet vises ved hypotesene du legger inn. Vurderingene dine telles i snittet, men vises ikke enkeltvis.</p>
+      <p class="help">Du må stå på deltakerlista for å komme inn. Navnet ditt er hentet derfra og
+        vises ved hypotesene du legger inn. Vurderingene dine telles i snittet, men vises ikke enkeltvis.</p>
     </form>
   </section>
 
@@ -521,18 +542,72 @@ const visDato = d => d ? d.split("-").reverse().join(".") : "";
 const forfalt = d => !!d && d < today();
 
 /* ---------- API ---------- */
-async function rpc(fn, args){
+/* Supabase Auth uten SDK. GoTrue er et vanlig REST-API, og appen håndrullet
+   allerede fetch-laget sitt — å dra inn et bibliotek fra CDN for tre kall ville
+   brutt regelen om én fil uten byggesteg. */
+async function gotrue(sti, body){
+  const r = await fetch(`${CFG.supabaseUrl}/auth/v1/${sti}`, {
+    method:"POST", headers:{apikey:CFG.supabaseKey,"Content-Type":"application/json"},
+    body:JSON.stringify(body)
+  });
+  const text = await r.text();
+  let d=null; try{ d=text?JSON.parse(text):null; }catch(e){}
+  if(!r.ok){
+    const e=new Error((d&&(d.error_description||d.msg||d.message))||("HTTP "+r.status));
+    e.status=r.status; e.kode=d&&(d.error_code||d.error); throw e;
+  }
+  return d;
+}
+
+/* Tilgangstokenet varer en time, sesjonen mye lenger. Uten fornyelse ville alle
+   blitt kastet ut midt i workshopen. */
+let fornyer=null;
+async function fornyToken(){
+  /* Pollingen går hvert fjerde sekund. Uten denne sperren ville flere kall
+     kunne forny samtidig, og siden Supabase roterer refresh-tokenet ville det
+     andre kallet brukt et token som nettopp ble ugyldig — og logget deg ut. */
+  if(fornyer) return fornyer;
+  fornyer = (async()=>{
+    try{
+      const d = await gotrue("token?grant_type=refresh_token", {refresh_token:session.refresh_token});
+      session = {...session, access_token:d.access_token, refresh_token:d.refresh_token,
+                 utloper: Date.now() + (d.expires_in||3600)*1000};
+      store(false, session);
+      return true;
+    }catch(e){ return false; }
+    finally{ fornyer=null; }
+  })();
+  return fornyer;
+}
+
+async function rpc(fn, args, nyttForsok){
+  if(session && session.utloper && Date.now() > session.utloper - 60000 && !nyttForsok){
+    if(!await fornyToken()){ toast("Innloggingen er utløpt. Logg inn på nytt."); logout(); throw new Error("utlogget"); }
+  }
+  const h = {apikey:CFG.supabaseKey, "Content-Type":"application/json"};
+  if(session && session.access_token) h.Authorization = "Bearer "+session.access_token;
   const r = await fetch(`${CFG.supabaseUrl}/rest/v1/rpc/${fn}`, {
-    method:"POST", headers:{apikey:CFG.supabaseKey,"Content-Type":"application/json"}, body:JSON.stringify(args)
+    method:"POST", headers:h, body:JSON.stringify(args||{})
   });
   const text = await r.text();
   let body=null; try{ body=text?JSON.parse(text):null; }catch(e){}
+  if(r.status===401 && !nyttForsok && session && session.refresh_token){
+    if(await fornyToken()) return rpc(fn, args, true);
+    toast("Innloggingen er utløpt. Logg inn på nytt."); logout(); throw new Error("utlogget");
+  }
   if(!r.ok){ const e=new Error((body&&body.message)||("HTTP "+r.status)); e.status=r.status; e.code=body&&body.code; throw e; }
   return body;
 }
-const auth = () => ({p_code:session.code, p_pid:session.pid, p_token:session.token});
 function handleErr(e){
+  if(e.message==="utlogget") return;            // logout() har allerede ryddet
   if(e.code==="28000"){ toast(e.message); logout(); return; }
+  /* 42501 = sesjonen er gyldig, men adressen står ikke på deltakerlista. Det
+     er ikke en feil brukeren kan rette ved å prøve igjen, så den logges ut med
+     en melding som sier hva som faktisk må skje. */
+  if(e.code==="42501" && /ikke invitert/.test(e.message||"")){
+    toast("Adressen din står ikke på deltakerlista. Si fra, så legges du til.");
+    logout(); return;
+  }
   /* 23514 = brudd på en CHECK. I praksis betyr det alltid det samme her:
      databasen har fortsatt den gamle grensen på 1-5 fordi migrasjon 0007 ikke
      er kjørt. Den rå Postgres-meldingen sier ingenting til den som bare prøver
@@ -1147,7 +1222,7 @@ async function bekreft(){
   for(const id of ids){
     const v=utkast[id];
     try{
-      await rpc("rate_hypothesis",{...auth(),p_id:id,p_k:v.k,p_u:v.u});
+      await rpc("rate_hypothesis",{p_id:id,p_k:v.k,p_u:v.u});
       myRates={...myRates,[id]:{k:v.k,u:v.u}};
       delete utkast[id]; ok++; skrivingOk();
     }catch(e){ handleErr(e); break; }
@@ -1273,9 +1348,10 @@ function tickLive(){
 async function refresh(){
   if(!session) return;
   try{
-    /* Deltakeren må identifisere seg for å få med sine egne kladder. Uten
-       p_pid svarer get_board bare med det publiserte. */
-    const b=await rpc("get_board",{p_code:session.code,p_pid:session.pid,p_token:session.token});
+    /* Kladd er personlig, så tavla må vite hvem som spør. Det gjør den nå via
+       sesjonen i Authorization-hodet — ingen id sendes inn, så ingen kan be om
+       en annens kladder ved å bytte ut en parameter. */
+    const b=await rpc("get_board");
     const alle=b.hypotheses||[];
     const nextHyps=alle.filter(x=>x.publisert!==false);
     const nextKladd=alle.filter(x=>x.publisert===false);
@@ -1314,20 +1390,20 @@ document.addEventListener("visibilitychange",()=>{ if(!document.hidden&&session)
 
 /* ---------- skriving ---------- */
 async function addHyp(tekst,kriterium,type,kilde,eier,publisert=true){
-  await rpc("add_hypothesis",{...auth(),p_tekst:tekst,p_kriterium:kriterium,p_type:type,
+  await rpc("add_hypothesis",{p_tekst:tekst,p_kriterium:kriterium,p_type:type,
     p_kilde:kilde||"",p_eier:eier||"",p_publisert:publisert});
 }
 async function publiser(id){
   try{
-    const r=await rpc("publish_hypothesis",{...auth(),p_id:id});
+    const r=await rpc("publish_hypothesis",{p_id:id});
     editing=null; toast("Publisert som "+nr(r.nr)); lastSig=null; await refresh();
   }catch(e){ handleErr(e); }
 }
 async function save(id,patch){
-  try{ await rpc("update_hypothesis",{...auth(),p_id:id,...patch}); skrivingOk(); lastSig=null; await refresh(); }catch(e){ handleErr(e); }
+  try{ await rpc("update_hypothesis",{p_id:id,...patch}); skrivingOk(); lastSig=null; await refresh(); }catch(e){ handleErr(e); }
 }
 async function del(id){
-  try{ await rpc("delete_hypothesis",{...auth(),p_id:id}); toast("Hypotesen er slettet"); lastSig=null; await refresh(); }catch(e){ handleErr(e); }
+  try{ await rpc("delete_hypothesis",{p_id:id}); toast("Hypotesen er slettet"); lastSig=null; await refresh(); }catch(e){ handleErr(e); }
 }
 const rateTimers={};
 function setRate(id,dim,val){
@@ -1343,7 +1419,7 @@ function setRate(id,dim,val){
     /* 0 er et svar, ikke et tomt felt. `v.k||null` ville sendt «vet ikke»
        videre som «ikke besvart» og slettet raden. */
     const nz = x => harSvart(x) ? x : null;
-    try{ await rpc("rate_hypothesis",{...auth(),p_id:id,p_k:nz(v.k),p_u:nz(v.u)}); skrivingOk(); }
+    try{ await rpc("rate_hypothesis",{p_id:id,p_k:nz(v.k),p_u:nz(v.u)}); skrivingOk(); }
     catch(e){ handleErr(e); }
     pendingRate.delete(id); lastSig=null;
   },350);
@@ -1384,34 +1460,216 @@ $("sort").addEventListener("change",e=>{ sort=e.target.value; render(); });
 let qT; $("q").addEventListener("input",e=>{ clearTimeout(qT); qT=setTimeout(()=>{ query=e.target.value.trim(); renderList(); },150); });
 
 /* ---------- innlogging ---------- */
+/* To steg: e-post, så kode. Kode og ikke magisk lenke, nettopp fordi folk
+   bruker flere enheter — en lenke logger inn telefonen du klikket på, ikke
+   PC-en du sitter ved. Koden kan leses på mobilen og tastes på maskinen. */
+const VKEY = "nordlys-hyp-venter";
+const EKEY = "nordlys-hyp-epost";
+let venterPaaKode=null;
+
+/* Enkel formsjekk, ikke en fullstendig RFC-validering. Poenget er bare å unngå
+   å huske halvskrevne adresser — serveren avgjør uansett om den finnes. */
+const gyldigEpost = e => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e);
+
+/* Adressen huskes mellom besøk. Innlogging krever en tur innom innboksen, og
+   ofte en tur i søppelposten, så feltet skal ikke stå tomt når man kommer
+   tilbake. Den overlever bevisst «Logg ut» — det er nettopp da den trengs. */
+function huskEpost(e){
+  try{ gyldigEpost(e) ? localStorage.setItem(EKEY,e) : localStorage.removeItem(EKEY); }catch(_){}
+}
+const husketEpost = () => { try{ return localStorage.getItem(EKEY)||""; }catch(_){ return ""; } };
+
+/* Hvilken adresse vi venter på kode for, lagres. Uten dette var det en
+   blindvei: lukket du fanen eller lastet siden på nytt mens koden lå i
+   innboksen, fantes det ikke lenger noe felt å taste den inn i — og å be om en
+   ny kode var eneste utvei. */
+function settVenter(epost){
+  venterPaaKode=epost||null;
+  try{ epost ? localStorage.setItem(VKEY,epost) : localStorage.removeItem(VKEY); }catch(e){}
+}
+
+function loginFeil(m){ $("l-err").textContent=m; $("l-err").hidden=false; }
+function visKodesteg(epost, sendt){
+  settVenter(epost);
+  $("steg-epost").hidden=true; $("steg-kode").hidden=false;
+  $("l-go").textContent="Logg inn";
+  /* «Jeg har allerede en kode» hører bare hjemme på e-poststeget. Står den her,
+     tilbyr den å gå dit du allerede er. */
+  $("l-harkode").hidden=true; $("l-bytt").hidden=false; $("l-nykode").hidden=false;
+  $("l-sendt").textContent = sendt
+    ? `Sendt til ${epost}. Koden gjelder i 12 timer, men kan bare brukes én gang.`
+    : `Skriv inn koden som ble sendt til ${epost}. Den gjelder i 12 timer og kan brukes én gang.`;
+  $("l-kode").value=""; $("l-kode").focus();
+}
+function visEpoststeg(){
+  settVenter(null);
+  $("steg-epost").hidden=false; $("steg-kode").hidden=true;
+  $("l-go").textContent="Send meg kode"; $("l-bytt").hidden=true; $("l-nykode").hidden=true;
+  $("l-err").hidden=true;
+  $("l-harkode").hidden = !$("l-epost").value.trim();
+}
+$("l-bytt").addEventListener("click",visEpoststeg);
+
+/* Supabase slipper bare én kodeforespørsel i minuttet per adresse. Uten en
+   nedtelling ser knappen ødelagt ut: du trykker, ingenting skjer, og neste
+   forsøk gir en feilmelding om noe man ikke kunne vite. */
+let nyKodeTimer=null;
+function sperrNyKode(sek){
+  clearInterval(nyKodeTimer);
+  const b=$("l-nykode"); let igjen=sek;
+  const tick=()=>{
+    if(igjen<=0){ clearInterval(nyKodeTimer); nyKodeTimer=null;
+      b.disabled=false; b.textContent="Send meg en ny kode"; return; }
+    b.disabled=true; b.textContent=`Send meg en ny kode (${igjen} s)`; igjen--;
+  };
+  tick(); nyKodeTimer=setInterval(tick,1000);
+}
+$("l-nykode").addEventListener("click",async()=>{
+  if(!venterPaaKode) return;
+  $("l-err").hidden=true; $("l-nykode").disabled=true;
+  try{
+    await gotrue("otp", {email:venterPaaKode, create_user:false});
+    $("l-sendt").textContent=`Ny kode sendt til ${venterPaaKode}. Den forrige virker ikke lenger.`;
+    $("l-kode").value=""; $("l-kode").focus();
+    sperrNyKode(60);
+  }catch(err){
+    if(err.status===429){
+      /* GoTrue oppgir hvor lenge det er igjen i meldingen. Finner vi tallet,
+         er det bedre å telle ned enn å si «vent litt». */
+      const m=/(\d+)\s*second/i.exec(err.message||"");
+      sperrNyKode(m?parseInt(m[1],10):60);
+      loginFeil("Du må vente litt før du kan be om en ny kode. Se etter den forrige i mellomtiden — også i søppelposten.");
+    }else{
+      $("l-nykode").disabled=false;
+      loginFeil("Fikk ikke sendt ny kode. Prøv igjen.");
+    }
+  }
+});
+/* Den som allerede har en kode skal slippe å be om en ny. Å be om ny er ikke
+   gratis: den forrige slutter å virke, så den som leter i søppelposten og
+   finner den gamle koden står igjen med en som nettopp ble ugyldig. */
+$("l-harkode").addEventListener("click",()=>{
+  const epost=$("l-epost").value.trim().toLowerCase();
+  if(!epost){ $("l-epost").focus(); return; }
+  huskEpost(epost);
+  visKodesteg(epost,false);
+});
+$("l-epost").addEventListener("input",()=>{ $("l-harkode").hidden = !$("l-epost").value.trim(); });
+
 $("login").addEventListener("submit",async e=>{
   e.preventDefault();
-  const code=$("l-code").value.trim().toUpperCase(), name=$("l-name").value.trim();
-  if(!code||!name) return;
   $("l-go").disabled=true; $("l-err").hidden=true;
   try{
-    const r=await rpc("join_workshop",{p_code:code,p_name:name});
-    session={code,pid:r.participant_id,token:r.token,name,workshop:r.workshop};
-    store(false,session); enter();
-  }catch(err){
-    $("l-err").textContent = err.code==="28000" ? "Feil passkode. Sjekk koden og prøv igjen." : "Fikk ikke kontakt med serveren. Prøv igjen.";
-    $("l-err").hidden=false;
+    if(!venterPaaKode){
+      const epost=$("l-epost").value.trim().toLowerCase();
+      if(!epost) return;
+      huskEpost(epost);
+      /* create_user:false ER tilgangskontrollen i dette steget: finnes ikke
+         adressen, sendes ingen kode. Databasen sperrer uansett i
+         private.meg(), men her slipper vi å sende e-post til folk som ikke
+         skal inn. */
+      try{
+        await gotrue("otp", {email:epost, create_user:false});
+      }catch(err){
+        /* Ekte GoTrue svarer 422 «Signups not allowed for otp» når adressen
+           ikke finnes. Stubben i testoppsettet svarte 400, så denne grenen var
+           feil helt til den ble prøvd mot en ekte server. */
+        if(err.status===422||err.status===400)
+          loginFeil("Adressen står ikke på deltakerlista. Sjekk skrivemåten, eller si fra så legges du til.");
+        else if(err.status===429)
+          loginFeil("Du har bedt om kode nylig. Vent et minutt — eller bruk koden du allerede har fått.");
+        else loginFeil("Fikk ikke kontakt med serveren. Prøv igjen.");
+        return;
+      }
+      visKodesteg(epost,true);
+      /* Sperren starter allerede her. Koden ble nettopp sendt, så «ny kode» er
+         ikke tilgjengelig før om et minutt uansett. */
+      sperrNyKode(60);
+      return;
+    }
+
+    const kode=$("l-kode").value.replace(/\s/g,"");
+    if(!kode) return;
+    let d;
+    try{
+      d=await gotrue("verify", {email:venterPaaKode, token:kode, type:"email"});
+    }catch(err){
+      if(err.status===429) loginFeil("For mange forsøk. Vent litt og prøv igjen.");
+      else loginFeil("Koden stemmer ikke, eller den er utløpt. Be om en ny.");
+      return;
+    }
+
+    /* Herfra er koden godkjent. Feiler noe nå, er det IKKE koden som er feil —
+       og å si «koden stemmer ikke» ville sendt folk ut på jakt etter en ny kode
+       som heller ikke hjelper. */
+    const ny={epost:venterPaaKode, access_token:d.access_token, refresh_token:d.refresh_token,
+              utloper:Date.now()+(d.expires_in||3600)*1000};
+    try{
+      session=ny;
+      const p=await rpc("min_profil");
+      session={...session, pid:p.participant_id, name:p.navn, workshop:p.workshop};
+      store(false,session); settVenter(null); huskEpost(ny.epost); enter();
+    }catch(err){
+      session=null; store(false,null);
+      if(err.code==="42501")
+        loginFeil("Du er logget inn, men adressen står ikke på deltakerlista. Si fra, så legges du til.");
+      else
+        loginFeil("Koden var riktig, men tavla svarte ikke. Prøv å logge inn på nytt.");
+      visKodesteg(ny.epost,false);
+    }
+  }finally{
+    $("l-go").disabled=false;
   }
-  $("l-go").disabled=false;
 });
 function enter(){
-  $("me-name").textContent=session.name;
+  $("me-name").textContent=session.name||session.epost;
   if(session.workshop) $("ws-name").textContent=session.workshop;
   $("view-login").hidden=true; $("app").hidden=false; $("nav").hidden=false;
   setLive(true); startPolling();
 }
+/* Navnet kommer fra deltakerlista, som er skrevet av én person. Den inneholder
+   både feilstavinger og minst én adresse uten kjent navn, så folk må kunne
+   rette sitt eget uten å gå veien om databasen. */
+$("me-name").addEventListener("click",async()=>{
+  if(!session) return;
+  const nytt=prompt("Navnet ditt, slik det vises ved hypotesene du legger inn:", session.name||"");
+  if(nytt===null) return;
+  const n=nytt.trim();
+  if(!n||n===session.name) return;
+  try{
+    await rpc("sett_navn",{p_navn:n});
+    session={...session,name:n}; store(false,session);
+    $("me-name").textContent=n; toast("Navnet er endret");
+    lastSig=null; await refresh(); render();
+  }catch(e){ handleErr(e); }
+});
 function logout(){
-  stopPolling(); store(false,null); session=null; hyps=[]; rates={}; myRates={}; loaded=false; lastSig=null;
+  stopPolling();
+  /* Ugyldiggjør sesjonen hos Supabase også, ikke bare lokalt. Uten dette ville
+     refresh-tokenet fortsatt virket for den som måtte få tak i det. */
+  if(session&&session.access_token) fetch(`${CFG.supabaseUrl}/auth/v1/logout`,{method:"POST",
+    headers:{apikey:CFG.supabaseKey,Authorization:"Bearer "+session.access_token}}).catch(()=>{});
+  store(false,null); session=null; hyps=[]; kladder=[]; rates={}; myRates={}; loaded=false; lastSig=null;
   $("ws-name").textContent="Nordlys · forprosjekt";
   skjulBanner();
+  /* Adressen fylles inn igjen etter utlogging. Den som logger ut er som regel
+     den samme som logger inn like etter. */
+  $("l-epost").value = husketEpost() || $("l-epost").value;
+  visEpoststeg();
   $("view-login").hidden=false; $("app").hidden=true; $("nav").hidden=true;
 }
-$("logout").addEventListener("click",logout);
+$("logout").addEventListener("click",()=>{
+  /* Sesjonen fornyes av seg selv og overlever at fanen og nettleseren lukkes.
+     «Logg ut» er den eneste måten å miste den på — og veien tilbake går via en
+     ny kode på e-post, kanskje innom søppelposten. Midt i en workshop er det
+     dyrt nok til at et feiltrykk skal måtte bekreftes.
+
+     logout() kalles også automatisk når sesjonen faktisk er ugyldig. Den veien
+     spør ikke, for da er det ingenting å angre på. */
+  if(!confirm("Logge ut?\n\nDu trenger en ny kode på e-post for å komme inn igjen. "
+            + "Vil du bare lukke siden, kan du gjøre det — du forblir innlogget.")) return;
+  logout();
+});
 
 /* ---------- storskjerm ---------- */
 function scene(på){
@@ -1559,8 +1817,25 @@ function skrivingOk(){ if(bannerVarig) skjulBanner(); }
 
 /* ---------- oppstart ---------- */
 session=store(true);
-if(session&&session.code&&session.pid&&session.token) enter();
-else { session=null; $("view-login").hidden=false; $("app").hidden=true; }
+/* Gamle sesjoner er fra passkodemodellen og har ingen gyldig tokenform. De
+   ryddes bort i stedet for å gi uforståelige feil ved første kall. */
+if(session&&session.access_token&&session.refresh_token) enter();
+else {
+  session=null; store(false,null);
+  $("view-login").hidden=false; $("app").hidden=true;
+  /* Avbrutt innlogging gjenopptas. Koden ligger fortsatt i innboksen og er
+     gyldig i 12 timer, så det er feil å sende folk tilbake til start og la dem
+     be om en ny — den ville gjort den de allerede har ugyldig. */
+  let ventet=null; try{ ventet=localStorage.getItem(VKEY); }catch(e){}
+  if(ventet){ $("l-epost").value=ventet; visKodesteg(ventet,false); }
+  else {
+    $("l-epost").value = husketEpost();
+    visEpoststeg();
+    /* Står adressen der fra sist, er neste handling å trykke «Send meg kode»,
+       ikke å skrive den på nytt. */
+    ($("l-epost").value ? $("l-go") : $("l-epost")).focus();
+  }
+}
 })();
 </script>
 </body>

@@ -77,10 +77,12 @@ with sjekk(nr, hva, ok) as (values
      select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
       where n.nspname='public' and p.proname='publish_hypothesis')),
 
-  ('0012', 'get_board tar imot p_pid for egne kladder', exists(
+  -- 0012 sjekket at get_board tok imot p_pid. Fra 0015 kommer identiteten fra
+  -- auth-sesjonen i stedet, så funksjonen har ingen parametre i det hele tatt.
+  ('0015', 'get_board henter identiteten fra sesjonen, ikke fra parametre', exists(
      select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
       where n.nspname='public' and p.proname='get_board'
-        and pg_get_function_arguments(p.oid) like '%p_pid%')),
+        and pg_get_function_arguments(p.oid) = '')),
 
   ('0012', 'delete_hypothesis krever eierskap', exists(
      select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
@@ -118,7 +120,65 @@ with sjekk(nr, hva, ok) as (values
    and exists(
      select 1 from pg_constraint
       where conrelid='public.ratings'::regclass and conname='ratings_u_check'
-        and pg_get_constraintdef(oid) like '%u >= 0%'))
+        and pg_get_constraintdef(oid) like '%u >= 0%')),
+
+  ('0015', 'e-post er identiteten', exists(
+     select 1 from information_schema.columns
+      where table_schema='public' and table_name='participants' and column_name='epost')),
+
+  ('0015', 'passkode og deltakertoken er borte', not exists(
+     select 1 from information_schema.columns
+      where table_schema='public' and table_name='participants' and column_name='token_hash')
+   and not exists(
+     select 1 from information_schema.columns
+      where table_schema='public' and table_name='workshops' and column_name='code_hash')
+   and not exists(
+     select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+      where n.nspname='public' and p.proname='join_workshop')),
+
+  ('0015', 'private.meg() oversetter sesjonen til en deltaker', exists(
+     select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+      where n.nspname='private' and p.proname='meg')),
+
+  -- Uten sesjon finnes det ingen identitet å handle som. Får anon fortsatt
+  -- kjøre funksjonene, er tavla åpen for hvem som helst med den offentlige
+  -- nøkkelen — den ligger i config.js og er ment å være kjent.
+  ('0015', 'anon kan ikke kjøre noen av RPC-ene', not exists(
+     select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+      where n.nspname='public'
+        and p.proname in ('get_board','add_hypothesis','update_hypothesis',
+                          'delete_hypothesis','rate_hypothesis','publish_hypothesis',
+                          'min_profil','sett_navn')
+        and has_function_privilege('anon', p.oid, 'execute'))),
+
+  ('0015', 'authenticated kan kjøre alle RPC-ene', (
+     select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+      where n.nspname='public'
+        and p.proname in ('get_board','add_hypothesis','update_hypothesis',
+                          'delete_hypothesis','rate_hypothesis','publish_hypothesis',
+                          'min_profil','sett_navn')
+        and has_function_privilege('authenticated', p.oid, 'execute')) = 8),
+
+  ('0016', 'de 21 inviterte har e-post', (
+     select count(*) from public.participants where epost is not null) >= 21),
+
+  ('0016', 'Forprosjektdokumentasjonen står uten e-post og eier fortsatt hypotesene', exists(
+     select 1 from public.participants p
+      where p.name = 'Forprosjektdokumentasjonen' and p.epost is null
+        and (select count(*) from public.hypotheses h
+              where h.created_by = p.id and h.deleted_at is null) > 0)),
+
+  ('0016', 'bare én Christoffer, og ingen testdeltakere igjen', (
+     select count(*) from public.participants where name ilike 'christoffer%') = 1
+   and not exists(
+     select 1 from public.participants
+      where name in ('TEST A','TEST B','Test tester','Test Testkraft','Test, Testfirma'))),
+
+  -- Sammenslåingen flytter created_by og status_av FØR tapere slettes. Gjøres
+  -- det i motsatt rekkefølge, nulles eierskapet av `on delete set null`, og da
+  -- kan ingen lenger redigere eller slette hypotesen.
+  ('0016', 'ingen hypoteser mistet eieren i sammenslåingen', not exists(
+     select 1 from public.hypotheses where created_by is null and deleted_at is null))
 )
 select nr            as "Migrasjon",
        hva           as "Hva som sjekkes",

@@ -78,84 +78,95 @@ beslutning — se hvor mange som havner der før dere lover å teste alle.
 
 ## Slik fungerer tilgangen
 
-- Ingen brukerkontoer. Deltakerne skriver inn en felles **passkode** og navnet sitt.
-- Alle tabeller har RLS slått på uten policies, så de kan ikke leses eller endres direkte via API-et.
-- All tilgang går gjennom sju databasefunksjoner (`get_board`, `join_workshop`, `add_hypothesis`,
-  `publish_hypothesis`, `update_hypothesis`, `delete_hypothesis`, `rate_hypothesis`). Alle krever passkoden.
-- Ved innlogging får hver deltaker et tilfeldig token som lagres i nettleseren. Skriving krever
-  token, så ingen kan endre andres vurderinger.
+- **Verifisert e-post.** Du skriver adressen din, får en engangskode på e-post, og taster den
+  inn. Supabase Auth håndterer utsending, utløp, bremser og sesjoner. Koden er gyldig i
+  12 timer og kan brukes på flere enheter — PC, mobil og nettbrett samtidig.
+- **Bare inviterte kommer inn.** De 21 deltakerne er opprettet på forhånd, og klienten ber om
+  kode med `create_user:false`. Står ikke adressen der, sendes ingen e-post.
+- Den virkelige sperren ligger likevel i databasen: `private.meg()` slår sesjonens e-post opp
+  mot `participants` og avviser alt annet. En gyldig Supabase-konto er ikke nok.
+- Alle tabeller har RLS slått på uten policies, så de kan ikke leses eller endres direkte via
+  API-et. All tilgang går gjennom åtte databasefunksjoner (`get_board`, `min_profil`,
+  `sett_navn`, `add_hypothesis`, `publish_hypothesis`, `update_hypothesis`,
+  `delete_hypothesis`, `rate_hypothesis`). Ingen av dem kan kjøres av `anon`.
+- **Ingen av funksjonene tar imot en deltaker-id.** Identiteten kommer fra sesjonen, så ingen
+  kan opptre som en annen ved å bytte ut en parameter.
 - **Slette kan du bare det du selv har lagt inn.** Knappen vises ikke på andres hypoteser, og
-  databasen avviser forsøket uansett klient. I et rom med seksten deltakere er ett feiltrykk nok
-  til å fjerne noen andres arbeid, og angrefrist finnes ikke.
+  databasen avviser forsøket uansett klient. I et rom med over tjue deltakere er ett feiltrykk
+  nok til å fjerne noen andres arbeid, og angrefrist finnes ikke.
 - **Kladd er personlig.** En hypotese kan lagres uten å publiseres. Da ser bare du den, den får
   ikke nummer, og ingen kan vurdere den. Nummeret tildeles i det du trykker «Publiser». Poenget
   er at en halvtenkt formulering ikke skal samle vurderinger før den er ferdig — snittet bærer
   preg av teksten den ble gitt på. Kladd skrives heller ikke til Confluence.
-- Passkoden lagres bare som bcrypt-hash i databasen.
-- Supabase-rådgiveren melder at funksjonene er `SECURITY DEFINER` og kan kalles anonymt.
-  Det er tilsiktet: funksjonene er selve tilgangskontrollen.
+- **E-post forlater aldri databasen.** `get_board` returnerer navn, aldri adresser. Adressen
+  skal ikke kunne bli bakveien til hvem som stemte hva.
+- Navnet hentes fra deltakerlista. Den som vil rette sitt eget, klikker på navnet sitt øverst.
 
-`config.js` inneholder prosjektets URL og publishable key. Den er ment å være offentlig.
+`config.js` inneholder prosjektets URL og publishable key. Den er ment å være offentlig —
+nøkkelen alene gir ingen tilgang, siden alt krever en innlogget sesjon.
+
+### Hvorfor ikke en gjenbrukbar kode i stedet
+
+Et tidlig forslag var en personlig kode som var gyldig for alltid, så man slapp å be om ny
+på hver enhet. Det ble forkastet: en kode uten utløp er et passord som ligger i klartekst i
+innboksen, og Supabase tillater uansett maks ett døgn. Behovet — «slippe å logge inn hele
+tiden» — løses av at **sesjonen** varer, ikke av at koden gjør det. Tilgangstokenet fornyes
+automatisk i bakgrunnen.
+
+### Hvorfor kode og ikke magisk lenke
+
+En lenke logger inn enheten du klikker på. Leser du e-posten på telefonen mens du sitter ved
+PC-en, logger lenken inn feil enhet. En kode kan leses på telefonen og tastes på maskinen.
+
+## Oppsett i Supabase
+
+Dette er konfigurasjon, ikke kode, og må være på plass før migrasjonene:
+
+| Innstilling | Verdi | Hvorfor |
+|---|---|---|
+| Custom SMTP | Resend, `noreply@n0rdlys.no` | Innebygd SMTP sender 2 e-poster i timen, og bare til teammedlemmer |
+| E-postmal (magic link) | `{{ .Token }}` | Står `{{ .ConfirmationURL }}` der, sendes lenke i stedet for kode |
+| `mailer_otp_exp` | 43200 (12 timer) | Samme kode skal virke på PC og mobil gjennom dagen |
+| `rate_limit_email_sent` | 100 | 21 personer × flere enheter sprenger standardgrensen på 30 |
+| `disable_signup` | `true` | Ingen skal kunne opprette konto selv |
+
+### E-posten havner i søppelpost
+
+**Regn med det, og planlegg rundt det.** Avsenderdomenet `n0rdlys.no` er nyregistrert og
+har ingen sendehistorikk, og null-i-stedet-for-o treffer heuristikker for forfalskede
+domener. `_dmarc` står på `p=quarantine`, så tvilstilfeller legges i søppelpost framfor å
+avvises. Mottakerne er dessuten på strenge bedriftsfiltre — Statnett, Hafslund, Elvia,
+Glitre Nett, Å Energi, KraftCERT og Skagerak Energi.
+
+Selve autentiseringen er riktig satt opp, så dette er ikke en feil som kan rettes med DNS:
+
+| Oppføring | Verdi |
+|---|---|
+| SPF | `send.n0rdlys.no` → Resends IP-er, `~all` |
+| DKIM | `resend._domainkey.n0rdlys.no` |
+| DMARC | `p=quarantine` |
+| MX (bounce) | `feedback.forge.rmta.net` |
+
+Det som gjenstår er omdømme, og det tar tid å bygge. Tiltak, i prioritert rekkefølge:
+
+1. **Send kodene dagen før, ikke når workshopen starter.** Da er det tid til å lete i
+   søppelposten uten at tjue personer venter.
+2. Be deltakerne markere e-posten som «ikke søppelpost». Neste kode går da som regel rett inn.
+3. Be IT om å hvitliste `noreply@n0rdlys.no` der det er mulig.
+4. Vurder et avsenderdomene med etablert omdømme hvis dette blir et gjentakende problem.
+   Et domene som ikke ser ut som en forvekslingsvariant, vil score vesentlig bedre.
+
+Innloggingssiden sier fra om søppelpost i det koden er sendt, med avsenderadresse og hva
+man skal søke etter.
+
+De 21 brukerne opprettes med Admin API-et. Invitasjonslista ligger i
+`0016_invitasjonsliste.sql`, som er utelatt fra repoet — se «Innhold».
 
 ## Publisere på GitHub Pages
 
 1. Legg filene i et repo.
 2. Settings → Pages → Deploy from a branch → `main` / `(root)`.
-3. Del adressen og passkoden med deltakerne. Ikke legg koden i repoet.
-
-## Ny workshop eller ny passkode
-
-### Bytte kode
-
-```sh
-./supabase/ny_kode.sh              # foreslår koder på formatet XXXX-XXXX
-./supabase/ny_kode.sh ABCD-2345    # setter den
-```
-
-Skriptet gjør koden om til store bokstaver før den hashes. Det er ikke kosmetikk:
-`workshop_by_code` slår opp på `upper(btrim(koden))`, så en hash laget av små bokstaver gjør
-at ingen kommer inn. Det er den enkleste måten å låse seg selv ute på.
-
-**Hvor kort kan koden være?** Databasen bruker rundt 18 ms på å verifisere ett forsøk, altså
-54 gjetninger i sekundet per tråd. `join_workshop` har ingen sperre mot mange forsøk, og
-prosjekt-URL-en ligger offentlig i `config.js`:
-
-| Lengde | Muligheter | Tid å knekke ved ~500 forsøk/sek |
-|---|---|---|
-| Et ord som NORDLYS | 1 | umiddelbart |
-| 4 tegn | 1 mill. | 35 minutter |
-| 5 tegn | 34 mill. | 9 timer |
-| 6 tegn | 1,1 mrd. | 12 dager |
-| **8 tegn (XXXX-XXXX)** | **1,1 bill.** | **35 år** |
-
-Skriptet lager koder på formatet `XXXX-XXXX`, nekter koder under seks tegn, og bruker et
-alfabet uten I, O, 0 og 1 slik at koden kan leses opp uten at noen skriver feil.
-
-Å øke bcrypt-kostnaden er ikke gratis her: `workshop_by_code` kjører ved **hvert** RPC-kall,
-også hver `get_board` fra pollingen. Seksten deltakere som poller hvert fjerde sekund gir
-fire bcrypt i sekundet. På kostnad 8 er det rundt 7 % av en kjerne, på kostnad 10 blir det
-fire ganger så mye.
-
-**Bytt kode før du sender den ut, ikke underveis.** Alle som er innlogget blir logget ut, og
-når de logger inn igjen oppretter `join_workshop` en *ny* deltaker. De gamle vurderingene
-blir liggende igjen som en usynlig ekstra stemme i snittet.
-
-### Manuelt i SQL Editor
-
-Kjør i Supabase SQL Editor:
-
-```sql
--- ny workshop
-insert into public.workshops (name, code_hash)
-values ('Navn på workshop', extensions.crypt('NY-KODE', extensions.gen_salt('bf', 8)));
-
--- bytt kode på eksisterende
-update public.workshops
-set code_hash = extensions.crypt('NY-KODE', extensions.gen_salt('bf', 8))
-where name = 'Nordlys forprosjekt – workshop';
-```
-
-Koder skrives med store bokstaver; siden gjør om det deltakerne skriver til store bokstaver.
+3. Del adressen med deltakerne. De logger inn med sin egen e-post.
 
 ## Live oppdatering
 
@@ -172,11 +183,13 @@ rendering. Uten de to mister du markøren midt i en vurdering hvert fjerde sekun
 **Dette repoet er offentlig, og hypotesetekstene ligger ikke i det.**
 
 GitHub Pages krever offentlig repo. Migrasjonene som inneholder selve hypotesene —
-`0003`, `0005`, `0006` og `0008` — er derfor utelatt via `.gitignore`. Til sammen er det
+`0003`, `0005`, `0006`, `0008` og `0013` — er derfor utelatt via `.gitignore`.
+Det samme gjelder `0016_invitasjonsliste.sql`, som inneholder navn og e-postadresse
+til 21 navngitte personer i sju virksomheter. Til sammen er det
 rundt 64 setninger som beskriver hvilke deler av Nordlys som er uverifisert, og samlet er
 det et kart over svakhetene i et kraftsektorinitiativ.
 
-Repoet inneholder **verktøyet**. Dataene ligger i Supabase, bak passkoden. Filene ligger
+Repoet inneholder **verktøyet**. Dataene ligger i Supabase, bak innlogging. Filene ligger
 lokalt hos den som kjører migrasjonene, og må deles på annen måte enn gjennom dette repoet.
 
 Den som kloner repoet får et fullt fungerende skjema gjennom `supabase/reparer.sql`, men et
@@ -241,10 +254,11 @@ kritikalitet.
 - `supabase/migrations/0012_kladd_og_eierskap.sql` – kladd før publisering, og sletting bare av egne
 - `supabase/migrations/0013_eierskap_og_to_nye.sql` – eier fra H-lista, driftsevne og mesh uten anker, og splitt av kostnad/alternativ
 - `supabase/migrations/0014_vet_ikke.sql` – «vet ikke» (0) som eget svar ved siden av 1–10
+- `supabase/migrations/0015_auth_epost.sql` – verifisert e-post via Supabase Auth; passkoden og deltakertokenet fjernes
+- `supabase/migrations/0016_invitasjonsliste.sql` – de 21 inviterte, og sammenslåing av dupliserte deltakere *(ikke i repoet)*
 - `supabase/reparer.sql` – bringer skjemaet i riktig tilstand uansett utgangspunkt
 - `supabase/sjekk_status.sql` – viser hvilke migrasjoner som er anvendt, endrer ingenting
 - `supabase/kjor.sh` – kjører de to over mot Supabase via docker
-- `supabase/ny_kode.sh` – setter ny passkode
 
 Migrasjoner kjøres med Supabase CLI (`supabase db push`), ikke ved å lime inn i SQL Editor.
 Se `AGENTS.md` for rekkefølge og fallgruver — migrasjonshistorikken i fjernbasen er ikke i

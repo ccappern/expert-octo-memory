@@ -7,6 +7,10 @@ supabase/.temp/
 # Tilkoblingsstreng til databasen, se supabase/kjor.sh
 .nordlys-db
 
+# API-nøkler (Resend m.m.). Settes i Supabase med `supabase secrets set`.
+.env
+.env.*
+
 # ---------------------------------------------------------------------------
 # Hypotesetekstene publiseres IKKE.
 #
@@ -28,3 +32,21 @@ supabase/migrations/0003_seed_forprosjekt.sql
 supabase/migrations/0005_rydd_typer.sql
 supabase/migrations/0006_tilpasningsevne.sql
 supabase/migrations/0008_fire_typer.sql
+supabase/migrations/0013_eierskap_og_to_nye.sql
+
+# ---------------------------------------------------------------------------
+# Personopplysninger publiseres IKKE.
+#
+# Av samme grunn som over: repoet er offentlig. Invitasjonslista inneholder
+# navn og e-postadresse til 21 navngitte personer i sju virksomheter. Det er
+# personopplysninger, og en ferdig adresseliste for den som vil utgi seg for
+# å være en av dem overfor de andre.
+#
+# Lista ligger i Supabase. Filen ligger lokalt hos den som kjører migrasjonen.
+# ---------------------------------------------------------------------------
+supabase/migrations/0016_invitasjonsliste.sql
+
+# Arbeidsfiler med hypotesetekst hentet ut av Confluence eller registeret.
+# Samme begrunnelse som over: innholdet er ikke klarert for offentliggjøring.
+*_tmp.md
+fra_confluence*.md
