@@ -71,9 +71,11 @@ begin
       on conflict (key) do update set value='10', satt=now();
     raise notice 'Skala: fant verdier over 5, antar 1-10. Ingen omregning.';
   else
+    -- 0 er «vet ikke» og ligger utenfor skalaen. Omregningsformelen ville gjort
+    -- den til -1 og brutt CHECK-en, så den må stå urørt gjennom konverteringen.
     update public.ratings
-       set k = case when k is null then null else round((k-1)*9.0/4.0)+1 end,
-           u = case when u is null then null else round((u-1)*9.0/4.0)+1 end,
+       set k = case when k is null or k = 0 then k else round((k-1)*9.0/4.0)+1 end,
+           u = case when u is null or u = 0 then u else round((u-1)*9.0/4.0)+1 end,
            updated_at = now();
     get diagnostics v_n = row_count;
     insert into private.meta(key,value) values ('skala','10')
@@ -82,8 +84,11 @@ begin
   end if;
 end $$;
 
-alter table public.ratings add constraint ratings_k_check check (k between 1 and 10);
-alter table public.ratings add constraint ratings_u_check check (u between 1 and 10);
+-- 0 = «vet ikke»: et eksplisitt svar om at man ikke har grunnlag for å mene noe,
+-- til forskjell fra NULL som betyr at aksen ikke er besvart. Verdien holdes
+-- utenfor snittet i klienten, men telles og vises for seg.
+alter table public.ratings add constraint ratings_k_check check (k between 0 and 10);
+alter table public.ratings add constraint ratings_u_check check (u between 0 and 10);
 
 -- ---------- fjern alle gamle utgaver av funksjonene ----------
 do $$

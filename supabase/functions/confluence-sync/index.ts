@@ -63,10 +63,14 @@ const naa = () => new Date().toLocaleString("nb-NO", {
  *  fortsatt kritisk, og det er derfor den er et premiss. */
 function stats(h: Hyp, rates: Rate[]) {
   const ks: number[] = [], us: number[] = [];
+  // 0 er «vet ikke»: et eksplisitt svar om manglende grunnlag. Det holdes utenfor
+  // snittet, men telles, fordi mange «vet ikke» er et funn i seg selv.
+  let vetIkke = 0;
   for (const r of rates) {
     if (r.hypothesis_id !== h.id) continue;
-    if (r.k) ks.push(r.k);
-    if (r.u) us.push(r.u);
+    if (r.k != null && r.k >= 1) ks.push(r.k);
+    if (r.u != null && r.u >= 1) us.push(r.u);
+    if (r.k === 0 || r.u === 0) vetIkke++;
   }
   const snitt = (a: number[]) => a.length ? a.reduce((s, x) => s + x, 0) / a.length : null;
   const delt = (a: number[]) => {
@@ -79,6 +83,8 @@ function stats(h: Hyp, rates: Rate[]) {
   const u = avklart && uRaa != null ? 1 : uRaa;
   return {
     k, u, uRaa, avklart, n: Math.min(ks.length, us.length),
+    vetIkke,
+    ingenVet: (ks.length === 0 || us.length === 0) && vetIkke > 0,
     uenig: delt(ks) || delt(us),
     forst: k != null && u != null && k > MIDT && u > MIDT,
   };
@@ -94,6 +100,7 @@ const K: Record<string, Kol> = {
   kr:     ["Kritisk", (r) => tall(r.k)],
   us:     ["Usikker", (r) => tall(r.u)],
   uenig:  ["Uenige", (r) => r.uenig ? "Ja" : ""],
+  vet:    ["Vet ikke", (r) => r.vetIkke ? String(r.vetIkke) + (r.ingenVet ? " (ingen kan svare)" : "") : ""],
   belegg: ["Belegg", (r) => r.avklart ? (avsnitt(r.status_notat) || "<strong>mangler</strong>") : "–"],
 };
 
@@ -172,6 +179,9 @@ function byggSide(hyps: Hyp[], rates: Rate[]) {
   const grunnlag  = velg((r) => r.k != null && r.u != null && r.k > MIDT && r.u <= MIDT);
   const akseptert = velg((r) => r.k != null && r.u != null && r.k <= MIDT && r.u > MIDT);
   const utenfor   = velg((r) => r.k != null && r.u != null);
+  // Må velges før «uvurdert», ellers havner de der under en feil overskrift:
+  // disse ER vurdert, rommet hadde bare ikke grunnlag til å svare.
+  const ingenVet  = velg((r) => r.ingenVet);
   const uvurdert  = velg(() => true);
 
   const info = `<ac:structured-macro ac:name="info"><ac:rich-text-body><p>` +
@@ -186,7 +196,7 @@ function byggSide(hyps: Hyp[], rates: Rate[]) {
       avkreftet, [K.krit, K.belegg, K.eier, K.kr, K.us], "") : "",
     seksjon("Må avklares før anbefaling",
       "Kritiske og usikre. Hver linje trenger eier og frist for å være en oppgave.",
-      avklares, [K.krit, K.eier, K.frist, K.kr, K.us, K.uenig], "Ingen ennå."),
+      avklares, [K.krit, K.eier, K.frist, K.kr, K.us, K.uenig, K.vet], "Ingen ennå."),
     seksjon("Dette legger vi til grunn",
       "Kritiske, men tilstrekkelig avklart. Premisser styringsgruppen kan bestride.",
       grunnlag, [K.krit, K.belegg, K.eier, K.kr, K.us, K.uenig], "Ingen ennå."),
@@ -196,6 +206,9 @@ function byggSide(hyps: Hyp[], rates: Rate[]) {
     seksjon("Utenfor",
       "Verken kritisk eller usikkert. Nevnes ikke i anbefalingen.",
       utenfor, [K.krit, K.kr, K.us], "Ingen."),
+    ingenVet.length ? seksjon("Ingen kan svare",
+      "Alle som svarte, svarte «vet ikke» på minst én akse. Kunnskapen finnes ikke i gruppen og må hentes utenfra.",
+      ingenVet, [K.krit, K.eier, K.frist, K.vet], "") : "",
     uvurdert.length ? seksjon("Ikke vurdert ennå",
       "Mangler vurdering på minst én akse og er derfor ikke plassert.",
       uvurdert, [K.krit, K.eier, K.frist], "") : "",
@@ -210,14 +223,14 @@ function byggSide(hyps: Hyp[], rates: Rate[]) {
  *  vurderinger er ikke med — bare snitt, antall og uenighetsflagget. */
 function alleTabell(rader: Rad[]) {
   const hode = ["Nr", "Type", "Vi tror at", "Vi vet det når", "Status", "Belegg", "Avklart",
-    "Eier", "Frist", "Kritisk", "Usikker", "Usikker vurdert", "Vurderinger", "Uenige", "Kilde", "Lagt inn av"];
+    "Eier", "Frist", "Kritisk", "Usikker", "Usikker vurdert", "Vurderinger", "Vet ikke", "Uenige", "Kilde", "Lagt inn av"];
   const rad = (r: Rad) => `<tr><td>${esc(nr(r.nr))}</td><td>${esc(TYPER[r.type] ?? "")}</td>` +
     `<td>${avsnitt(r.tekst)}</td><td>${avsnitt(r.kriterium)}</td>` +
     `<td>${esc(STATUS[r.status] ?? r.status)}</td><td>${avsnitt(r.status_notat)}</td>` +
     `<td>${esc(r.status_endret ? dato(r.status_endret) + (r.status_av ? " / " + r.status_av : "") : "")}</td>` +
     `<td>${esc(r.eier)}</td><td>${esc(dato(r.frist))}</td>` +
     `<td>${tall(r.k)}</td><td>${tall(r.u)}</td><td>${tall(r.uRaa)}</td>` +
-    `<td>${r.n}</td><td>${r.uenig ? "Ja" : ""}</td>` +
+    `<td>${r.n}</td><td>${r.vetIkke || ""}</td><td>${r.uenig ? "Ja" : ""}</td>` +
     `<td>${avsnitt(r.kilde)}</td><td>${esc(r.by ?? "")}</td></tr>`;
   return `<h2>Alle hypoteser</h2><p>Hele registeret samlet. «Usikker» er overstyrt til 1 for ` +
     `avklarte hypoteser; «Usikker vurdert» er det deltakerne faktisk stemte. Individuelle ` +

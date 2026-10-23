@@ -89,7 +89,36 @@ with sjekk(nr, hva, ok) as (values
 
   ('0012', 'kun én utgave av get_board og add_hypothesis', (
      select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace
-      where n.nspname='public' and p.proname in ('get_board','add_hypothesis')) = 2)
+      where n.nspname='public' and p.proname in ('get_board','add_hypothesis')) = 2),
+
+  -- 0013 endrer bare data, ikke skjema. Derfor sjekkes radene den innførte.
+  ('0013', 'eierskap er satt fra H-lista', (
+     select count(*) from public.hypotheses
+      where deleted_at is null and eier <> '') >= 18),
+
+  ('0013', 'driftsevne og mesh uten anker finnes', (
+     select count(*) from public.hypotheses
+      where deleted_at is null and tekst in (
+        'hver virksomhet har kapasitet til selv å drifte en node og en Varde i daglig drift',
+        'deling mellom eksisterende deltakere fortsetter selv om tillitsankeret er utilgjengelig')) = 2),
+
+  ('0013', 'nr. 13 er splittet i kostnad og alternativvurdering', exists(
+     select 1 from public.hypotheses where deleted_at is null and tekst =
+       'ingen eksisterende løsning dekker behovet godt nok til at det er riktig å bygge nytt')
+   and not exists(
+     select 1 from public.hypotheses where deleted_at is null and tekst =
+       'kostnad og forretningsgevinst forsvarer videreføring, og alternative løsninger ikke dekker behovet like godt')),
+
+  -- Postgres normaliserer «between 0 and 10» til «k >= 0 AND k <= 10», så det er
+  -- den formen som må matches her, ikke slik migrasjonen er skrevet.
+  ('0014', '«vet ikke» (0) er tillatt på begge aksene', exists(
+     select 1 from pg_constraint
+      where conrelid='public.ratings'::regclass and conname='ratings_k_check'
+        and pg_get_constraintdef(oid) like '%k >= 0%')
+   and exists(
+     select 1 from pg_constraint
+      where conrelid='public.ratings'::regclass and conname='ratings_u_check'
+        and pg_get_constraintdef(oid) like '%u >= 0%'))
 )
 select nr            as "Migrasjon",
        hva           as "Hva som sjekkes",

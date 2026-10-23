@@ -42,6 +42,16 @@ ut som dere ikke tenkte på det.
 Skalaen er **1–10** på begge akser. Den har bevisst ikke noe midtpunkt: 5,5 finnes ikke som
 valg, så hver deltaker må velge side. Kvadrantgrensen går derfor mellom 5 og 6.
 
+Ved siden av tallene står **«Vet ikke»**. Den skiller «jeg mener usikkerheten er lav» fra
+«jeg har ikke grunnlag for å mene noe» — to helt ulike utsagn som før så like ut, fordi den
+uten grunnlag enten måtte gjette eller tie. «Vet ikke» teller ikke i snittet, men telles og
+vises for seg: «3 vet ikke» på kortet, og en stiplet ring rundt punktet i matrisen som blir
+tydeligere jo større del av rommet som ikke kunne svare.
+
+Har ingen av dem som svarte noe tallgrunnlag, merkes hypotesen **«Ingen kan svare»** og får
+sitt eget filter. Den er ikke uvurdert — den er ubesvarlig med kunnskapen i rommet, og
+krever at noen henter inn kunnskap utenfra. Det er en annen oppgave enn å vurdere.
+
 To måter å vurdere på, begge like gyldige:
 
 - **Skalaen på kortet** — klikk et trinn. Lagres med én gang.
@@ -229,6 +239,8 @@ kritikalitet.
 - `supabase/migrations/0010_confluence_sync.sql` – automatisk skriving til Confluence
 - `supabase/migrations/0011_passkode.sql` – passkoden som hash
 - `supabase/migrations/0012_kladd_og_eierskap.sql` – kladd før publisering, og sletting bare av egne
+- `supabase/migrations/0013_eierskap_og_to_nye.sql` – eier fra H-lista, driftsevne og mesh uten anker, og splitt av kostnad/alternativ
+- `supabase/migrations/0014_vet_ikke.sql` – «vet ikke» (0) som eget svar ved siden av 1–10
 - `supabase/reparer.sql` – bringer skjemaet i riktig tilstand uansett utgangspunkt
 - `supabase/sjekk_status.sql` – viser hvilke migrasjoner som er anvendt, endrer ingenting
 - `supabase/kjor.sh` – kjører de to over mot Supabase via docker

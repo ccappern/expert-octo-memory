@@ -157,6 +157,15 @@ select.status{border:1px solid var(--line);background:var(--bg);border-radius:7p
 .seg button+button{border-left:1px solid var(--line)}
 .seg button:hover{background:var(--sunk)}
 .seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);font-weight:600}
+/* «Vet ikke» står i samme rad som tallene, men tydelig adskilt: det er ikke en
+   ellevte styrkegrad, det er et annet slags svar. Derfor tekst og ikke tall.
+   Avgitt tilstand må likevel være like utvetydig som et valgt tall — er den
+   bare litt gråere enn den utrykte, ser deltakeren ikke at svaret er lagret. */
+.seg button.vi{width:auto;padding:0 10px;font-size:12px;color:var(--muted);border-left:2px solid var(--line)}
+.seg button.vi[aria-pressed="true"]{background:var(--ink);color:var(--surface);font-weight:600}
+.vitall{font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.legend .ring{width:11px;height:11px;border-radius:50%;border:1.5px dashed var(--muted)}
+.mx-tip .uenig.vi,.mx-modal .uenig.vi{background:var(--sunk);color:var(--muted)}
 .avg{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums;border-radius:6px;padding:2px 6px}
 .avg b{color:var(--ink)}
 .avg.bump{animation:bump 1.4s ease-out}
@@ -455,6 +464,17 @@ const ANDEL = 0.30;   // minst så stor andel på hver side av grensen
 const SPRIK = 4;      // og minst så stor avstand mellom ytterpunktene
 const MIN_STEMMER = 3;
 const TRINN = Array.from({length:SKALA}, (_,i)=>i+1);
+/* «Vet ikke» er 0, altså utenfor skalaen. Det skiller «jeg mener usikkerheten
+   er lav» fra «jeg har ikke grunnlag for å mene noe» — to helt ulike utsagn som
+   før så like ut, fordi den uten grunnlag enten måtte gjette eller tie.
+   `undefined` betyr fortsatt at aksen ikke er besvart.
+
+   Fella: 0 er falsy. Overalt der koden før spurte `if (v.k)` for å finne ut om
+   noen hadde svart, må den nå spørre eksplisitt. Derfor disse tre. */
+const VET_IKKE = 0;
+const erTall    = v => typeof v === "number" && v >= 1;
+const erVetIkke = v => v === VET_IKKE;
+const harSvart  = v => erTall(v) || erVetIkke(v);
 const tcolor = t => `var(--t-${TYPES[t]?t:"verdi"})`;
 const SKEY = "nordlys-hyp-session";
 
@@ -527,7 +547,12 @@ function handleErr(e){
     return;
   }
   if(e.code==="23514" && /ratings_[ku]_check/.test(e.message||"")){
-    showBanner("Databasen er fortsatt satt opp for skala 1–5. Kjør migrasjonen 0007_skala_1_10.sql i Supabase, så fungerer plasseringen.", true);
+    /* Samme feilkode, to ulike manglende migrasjoner. Verdien avgjør hvilken:
+       0 er «vet ikke» og krever 0014, alt over 5 krever 0007. */
+    const vetIkke = /\b0\b/.test(e.message||"") && !/\b([6-9]|10)\b/.test(e.message||"");
+    showBanner(vetIkke
+      ? "Databasen kjenner ikke «vet ikke» ennå. Kjør migrasjonen 0014_vet_ikke.sql i Supabase."
+      : "Databasen er fortsatt satt opp for skala 1–5. Kjør migrasjonen 0007_skala_1_10.sql i Supabase, så fungerer plasseringen.", true);
     toast("Vurderingen ble ikke lagret – se meldingen over");
     return;
   }
@@ -544,7 +569,16 @@ const erAvklart = x => !!x && (x.status==="bekreftet" || x.status==="avkreftet")
 function allRates(){ const out={...rates}; if(session) out[session.pid]=myRates; return out; }
 function statsFor(id){
   const ks=[], us=[];
-  for(const r of Object.values(allRates())){ const v=r&&r[id]; if(!v) continue; if(v.k) ks.push(v.k); if(v.u) us.push(v.u); }
+  /* «Vet ikke» teller ikke i snittet, men det telles. At halve rommet ikke kan
+     svare på en hypotese er et funn i seg selv, og det funnet forsvinner hvis
+     tallet bare slukes. */
+  let vk=0, vu=0, vn=0;
+  for(const r of Object.values(allRates())){
+    const v=r&&r[id]; if(!v) continue;
+    if(erTall(v.k)) ks.push(v.k); else if(erVetIkke(v.k)) vk++;
+    if(erTall(v.u)) us.push(v.u); else if(erVetIkke(v.u)) vu++;
+    if(erVetIkke(v.k)||erVetIkke(v.u)) vn++;
+  }
   const avg=a=>a.length?a.reduce((s,x)=>s+x,0)/a.length:null;
   const delt=a=>{
     if(a.length<MIN_STEMMER) return false;
@@ -554,7 +588,12 @@ function statsFor(id){
   const k=avg(ks), uRaa=avg(us);
   const avklart = erAvklart(hyps.find(y=>y.id===id));
   const u = (avklart && uRaa!=null) ? 1 : uRaa;
+  /* Ingen tallsvar i det hele tatt, men noen har sagt «vet ikke»: da er det
+     ikke at hypotesen er uvurdert, det er at rommet ikke har kunnskapen. */
+  const ingenVetK = ks.length===0 && vk>0, ingenVetU = us.length===0 && vu>0;
   return {k,u,uRaa,avklart,n:Math.min(ks.length,us.length),split:delt(ks)||delt(us),
+          vetIkkeK:vk, vetIkkeU:vu, vetIkke:vn,
+          ingenVetK, ingenVetU, ingenVet:ingenVetK||ingenVetU,
           first:k!=null&&u!=null&&k>MIDT&&u>MIDT};
 }
 const fmt = x => x==null?"–":x.toFixed(1).replace(".",",");
@@ -562,6 +601,10 @@ const klem = (v,a,b) => Math.min(b,Math.max(a,v));
 /* Verdien som skal vises i min-visningen: utkast hvis du har dratt, ellers det
    som faktisk er lagret. */
 const minVerdi = id => utkast[id] || myRates[id] || null;
+/* Et «vet ikke» har ingen plass i rutenettet. Den som har svart det, er ferdig
+   med hypotesen, men punktet kan ikke tegnes. De to spørsmålene må derfor
+   stilles hver for seg. */
+const kanPlasseres = v => !!v && erTall(v.k) && erTall(v.u);
 
 /* Radioknapper framfor nedtrekk: forklaringen til hver type må være synlig i det
    øyeblikket valget tas, ikke gjemt bak et klikk. */
@@ -590,7 +633,7 @@ function eierValg(id, valgt){
   const alle = kjente.includes(v) ? kjente : [...kjente, v];
   return h("select",{id}, alle.map(k=>h("option",{value:k,selected:k===v}, eierNavn(k))));
 }
-const ferdigVurdert = x => { const m=myRates[x.id]; return !!(m&&m.k&&m.u); };
+const ferdigVurdert = x => { const m=myRates[x.id]; return !!m && harSvart(m.k) && harSvart(m.u); };
 
 /* ---------- sammendrag ---------- */
 function renderSummary(){
@@ -625,14 +668,19 @@ function renderFilters(){
   counts.uvurdert=hyps.filter(x=>!ferdigVurdert(x)).length;
   counts.uteneier=hyps.filter(x=>statsFor(x.id).first&&!x.eier).length;
   counts.uenige=hyps.filter(x=>statsFor(x.id).split).length;
+  counts.ingenvet=hyps.filter(x=>statsFor(x.id).ingenVet).length;
   const mk=(key,label,color)=>h("button",{class:"chip","aria-pressed":String(filter===key),type:"button",
     onclick:()=>{filter=key;render();}},
     color?h("span",{class:"dot",style:`background:${color}`}):null, label, h("span",{class:"c"},counts[key]));
-  $("filters").replaceChildren(
+  $("filters").replaceChildren(...[
     mk("alle","Alle"),
     ...Object.keys(TYPES).map(t=>mk(t,TYPES[t].label,tcolor(t))),
     mk("forst","Må avklares"), mk("uvurdert","Ikke vurdert av deg"),
-    mk("uenige","Uenige"), mk("uteneier","Mangler eier"));
+    mk("uenige","Uenige"),
+    /* Vises bare når den har treff. Filterraden er allerede lang, og et filter
+       med null i er bare støy. */
+    counts.ingenvet?mk("ingenvet","Ingen kan svare"):null,
+    mk("uteneier","Mangler eier")].filter(Boolean));
 }
 
 function visible(){
@@ -641,6 +689,7 @@ function visible(){
   else if(filter==="uvurdert") list=list.filter(x=>!ferdigVurdert(x));
   else if(filter==="uteneier") list=list.filter(x=>statsFor(x.id).first&&!x.eier);
   else if(filter==="uenige") list=list.filter(x=>statsFor(x.id).split);
+  else if(filter==="ingenvet") list=list.filter(x=>statsFor(x.id).ingenVet);
   else if(filter!=="alle") list=list.filter(x=>x.type===filter);
   if(query){
     const q=query.toLowerCase();
@@ -656,10 +705,20 @@ function visible(){
 
 /* ---------- kort ---------- */
 function seg(id, dim){
-  const cur=(utkast[id]||myRates[id]||{})[dim]||0;
-  return h("div",{class:"seg",role:"group"}, TRINN.map(n=>h("button",{type:"button","aria-pressed":String(cur===n),
-    "data-fk":`r:${id}:${dim}:${n}`,
-    "aria-label":`${dim==="k"?"Kritisk":"Usikker"} ${n} av ${SKALA}`, onclick:()=>setRate(id,dim,cur===n?0:n)}, n)));
+  /* Før var 0 returverdien for «fjern svaret». Nå er 0 et svar, så nullstilling
+     sendes som null. Blandes de to, blir «vet ikke» umulig å avgi. */
+  const raa=(utkast[id]||myRates[id]||{})[dim];
+  const cur = harSvart(raa) ? raa : null;
+  const navn = dim==="k" ? "Kritisk" : "Usikker";
+  return h("div",{class:"seg",role:"group"},
+    TRINN.map(n=>h("button",{type:"button","aria-pressed":String(cur===n),
+      "data-fk":`r:${id}:${dim}:${n}`,
+      "aria-label":`${navn} ${n} av ${SKALA}`, onclick:()=>setRate(id,dim,cur===n?null:n)}, n)),
+    h("button",{type:"button",class:"vi","aria-pressed":String(erVetIkke(cur)),
+      "data-fk":`r:${id}:${dim}:vi`,
+      title:`Du har ikke grunnlag for å vurdere ${navn.toLowerCase()}. Teller ikke i snittet.`,
+      "aria-label":`${navn}: vet ikke`,
+      onclick:()=>setRate(id,dim,erVetIkke(cur)?null:VET_IKKE)}, "Vet ikke"));
 }
 function emptyState(){
   return h("div",{class:"empty-state"},
@@ -696,6 +755,10 @@ function card(x){
     h("span",{class:"type",style:`color:${tcolor(x.type)}`},TYPES[x.type]?.label||"Verdi"),
     kladd?null:s.first?h("span",{class:"badge q"},"Må avklares"):null,
     kladd?null:s.split?h("span",{class:"badge w",title:"Vurderingene spriker med 3 eller mer. Ta diskusjonen."},"Uenige"):null,
+    /* Ingen tallsvar, men noen har sagt «vet ikke»: hypotesen er ikke glemt,
+       den er ubesvarlig med kunnskapen i rommet. Det er en annen oppgave enn
+       å vurdere, og krever at noen henter inn kunnskap utenfra. */
+    kladd?null:s.ingenVet?h("span",{class:"badge w",title:"Ingen som har svart, hadde grunnlag for å vurdere. Kunnskapen må hentes utenfra."},"Ingen kan svare"):null,
     s.first&&!x.eier?h("span",{class:"badge w"},"Mangler eier"):null,
     x.status==="avkreftet"?h("span",{class:"badge w"},"Avkreftet"):null,
     erAvklart(x)&&!x.status_notat?h("span",{class:"badge w",title:"Statusen ble satt før belegg ble påkrevd. Sett den på nytt for å dokumentere hva som avgjorde det."},"Mangler belegg"):null,
@@ -775,7 +838,10 @@ function card(x){
           h("span",{class:"lbl"},"Kritisk"),seg(x.id,"k"),h("span",{class:"ends"},"1 merkes ikke → 10 faller")),
         h("div",{class:"scale",title:"Hvor lite vet vi om dette i dag? 1 = godt dokumentert, 10 = rent gjetning"},
           h("span",{class:"lbl"},"Usikker"),seg(x.id,"u"),h("span",{class:"ends"},"1 dokumentert → 10 gjetning")),
-        h("span",{class:"avg"+(bump?" bump":"")},"Snitt ",h("b",{},fmt(s.k))," / ",h("b",{},fmt(s.u))," · ",s.n," ",s.n===1?"vurdering":"vurderinger")),
+        h("span",{class:"avg"+(bump?" bump":"")},"Snitt ",h("b",{},fmt(s.k))," / ",h("b",{},fmt(s.u))," · ",s.n," ",s.n===1?"vurdering":"vurderinger"),
+        /* Tallet står for seg og ikke inne i snittet: det sier noe om rommet,
+           ikke om hypotesen. */
+        s.vetIkke?h("span",{class:"vitall",title:"Så mange har svart «vet ikke» på minst én akse. Teller ikke i snittet."},s.vetIkke," vet ikke"):null),
       h("div",{class:"actions"},
         kladd?null:h("button",{class:"linkbtn",type:"button",onclick:()=>{selected=x.id;render();}},"Vis i matrisen"),
         h("button",{class:"linkbtn",type:"button",onclick:()=>{editing=x.id;confirmDel=null;render();}},"Rediger"),
@@ -787,7 +853,7 @@ function card(x){
   }
   return h("article",{class:"card"+(kladd?" erkladd":"")+(selected===x.id?" sel":"")+(!kladd&&s.first?" first":""),id:"c-"+x.id},head,statusForm,...body);
 }
-const avgKey = s => `${s.k==null?"":s.k.toFixed(2)}|${s.u==null?"":s.u.toFixed(2)}|${s.n}`;
+const avgKey = s => `${s.k==null?"":s.k.toFixed(2)}|${s.u==null?"":s.u.toFixed(2)}|${s.n}|${s.vetIkke}`;
 
 /* ---------- matrise ---------- */
 const NS="http://www.w3.org/2000/svg";
@@ -859,6 +925,7 @@ function hoverKort(p, festet){
       h("div",{class:"tall"},
         "Kritisk ",h("b",{},fmt(p.k))," · Usikker ",h("b",{},fmt(p.u)),
         x.eier?" · "+eierNavn(x.eier):null,
+        p.vetIkke?h("span",{class:"uenig vi"},`${p.vetIkke} vet ikke`):null,
         p.split?h("span",{class:"uenig"},"Uenige"):null),
       x.status_notat?h("p",{class:"belegg"},h("span",{class:"pre"},"Belegg: "),x.status_notat):null,
       festet?h("p",{class:"lukk"},"Klikk hvor som helst eller trykk Esc for å lukke"):null));
@@ -908,14 +975,23 @@ function renderMatrix(){
 
   const pts = min
     ? hyps.map(x=>{
-        const v=minVerdi(x.id); if(!(v&&v.k&&v.u)) return null;
+        const v=minVerdi(x.id); if(!kanPlasseres(v)) return null;
         /* Avklart er ikke lenger din mening, så punktet låses og legges til
            venstre også her. Ellers ville samme hypotese stått to ulike steder
            i de to visningene. */
         const av=erAvklart(x);
-        return {x,k:v.k,u:av?1:v.u,utk:!av&&!!utkast[x.id],split:false,laast:av};
+        return {x,k:v.k,u:av?1:v.u,utk:!av&&!!utkast[x.id],split:false,laast:av,vetIkke:0,andelVet:0};
       }).filter(Boolean)
-    : hyps.map(x=>{const st=statsFor(x.id); return (st.k!=null&&st.u!=null)?{x,k:st.k,u:st.u,utk:false,split:st.split}:null;}).filter(Boolean);
+    : hyps.map(x=>{const st=statsFor(x.id);
+        if(st.k==null||st.u==null) return null;
+        /* Ringen vokser med hvor stor del av rommet som ikke kunne svare.
+           Punktet står fortsatt på tallsnittet — det er riktig plassering for
+           dem som faktisk hadde grunnlag — men ringen sier hvor tynt snittet
+           er. */
+        const svart=st.n+st.vetIkke;
+        return {x,k:st.k,u:st.u,utk:false,split:st.split,
+                vetIkke:st.vetIkke, andelVet: svart?st.vetIkke/svart:0};
+      }).filter(Boolean);
   pts.sort((a,b)=>a.x.nr-b.x.nr);
 
   const placed=[];
@@ -930,6 +1006,7 @@ function renderMatrix(){
     const flyttbar = min && !p.laast;
     const g=s_("g",{id:"pt-"+p.x.id, class:"pt"+(flyttbar?" flyttbar":""),tabindex:"0",role:"button",
       "aria-label":`${nr(p.x.nr)}: ${p.x.tekst}. Kritisk ${p.k}, usikker ${p.u}.`
+        +(p.vetIkke?` ${p.vetIkke} vet ikke.`:"")
         +(avkreftet?" Avkreftet.":"")+(p.laast?" Avklart, kan ikke flyttes.":"")
         +(flyttbar?" Bruk piltastene for å flytte.":"")});
     /* En avkreftet kritisk hypotese er det sterkeste No-Go-argumentet som
@@ -937,6 +1014,14 @@ function renderMatrix(){
        glir inn i «Grunnlag» når usikkerheten faller. */
     if(avkreftet) g.append(s_("circle",{cx,cy,r:(sel?16:13)+5,fill:"none",
       stroke:"var(--bad)","stroke-width":"2","stroke-dasharray":"3 2"}));
+    /* Stiplet ring utenpå: jo mer av rommet som svarte «vet ikke», jo tydeligere
+       står den. Et punkt kan ligge midt i «Må avklares» på snittet av tre
+       stemmer mens ti andre ikke hadde grunnlag — uten ringen ser de to
+       tilfellene helt like ut. Avkreftet eier allerede sin egen ring, så denne
+       legges utenfor den. */
+    if(p.andelVet>0) g.append(s_("circle",{cx,cy,r:(sel?16:13)+(avkreftet?9:5),fill:"none",
+      stroke:"var(--muted)","stroke-width":String(1+p.andelVet*1.6),
+      "stroke-dasharray":"2 3","stroke-opacity":String(0.35+p.andelVet*0.55)}));
     g.append(s_("circle",{cx,cy,r:sel?16:13,fill:tcolor(p.x.type),
       stroke:p.utk?"var(--warn)":(sel?"var(--ink)":"var(--surface)"),
       "stroke-width":p.utk?"3":(sel?"3":"2"),
@@ -999,23 +1084,45 @@ function renderMatrix(){
     ? `${pts.length} av ${hyps.length} plassert av deg`
     : `${pts.length} av ${hyps.length} plassert`;
 
-  $("legend").replaceChildren(...Object.entries(TYPES).map(([k,t])=>h("span",{},h("span",{class:"dot",style:`background:${tcolor(k)}`}),t.label)),
-    min?null:h("span",{},h("span",{class:"dot",style:"background:var(--warn)"}),"Uenige"));
+  /* replaceChildren tar imot noder og strenger — en `null` blir til teksten
+     «null» på skjermen. `h()` filtrerer bort falske barn, men her går det rett
+     inn, så lista må renses først. */
+  $("legend").replaceChildren(...[
+    ...Object.entries(TYPES).map(([k,t])=>h("span",{},h("span",{class:"dot",style:`background:${tcolor(k)}`}),t.label)),
+    min?null:h("span",{},h("span",{class:"dot",style:"background:var(--warn)"}),"Uenige"),
+    min?null:h("span",{},h("span",{class:"ring"}),"Noen vet ikke")].filter(Boolean));
 
   renderTray(min);
+  /* Tre tilstander, ikke to. «Ingen kan svare» er ikke en glemt vurdering, og
+     å be om at den plasseres er feil oppfordring — da må noen hente kunnskap
+     utenfra i stedet. */
   const un = min
-    ? hyps.filter(x=>!minVerdi(x.id))
-    : hyps.filter(x=>{const st=statsFor(x.id);return st.k==null||st.u==null;});
-  $("unrated").textContent = min
-    ? (un.length?"Dra et punkt dit du mener det hører hjemme, eller velg en uplassert under og klikk i matrisen.":"Alle hypotesene er plassert av deg.")
-    : (un.length?`Ikke plassert ennå: ${un.sort((a,b)=>a.nr-b.nr).map(x=>nr(x.nr)).join(", ")}`:"");
+    ? hyps.filter(x=>!ferdigVurdert(x) && !utkast[x.id])
+    : hyps.filter(x=>{const st=statsFor(x.id);return (st.k==null||st.u==null)&&!st.ingenVet;});
+  const ingenVet = min
+    ? hyps.filter(x=>{const v=minVerdi(x.id);return v&&!kanPlasseres(v)&&harSvart(v.k)&&harSvart(v.u);})
+    : hyps.filter(x=>statsFor(x.id).ingenVet);
+  const linjer=[];
+  if(min){
+    linjer.push(un.length
+      ? "Dra et punkt dit du mener det hører hjemme, eller velg en uplassert under og klikk i matrisen."
+      : "Du har svart på alle hypotesene.");
+    if(ingenVet.length) linjer.push(`Du svarte «vet ikke» på: ${ingenVet.sort((a,b)=>a.nr-b.nr).map(x=>nr(x.nr)).join(", ")}`);
+  }else{
+    if(un.length) linjer.push(`Ikke plassert ennå: ${un.sort((a,b)=>a.nr-b.nr).map(x=>nr(x.nr)).join(", ")}`);
+    if(ingenVet.length) linjer.push(`Ingen kan svare: ${ingenVet.sort((a,b)=>a.nr-b.nr).map(x=>nr(x.nr)).join(", ")}`);
+  }
+  $("unrated").textContent = linjer.join(" · ");
 }
 
 /* Uplasserte hypoteser kan ikke dras inn utenfra, så de velges her og plasseres
    med et klikk i matrisen. */
 function renderTray(min){
   const el=$("mx-tray");
-  const un = min ? hyps.filter(x=>!minVerdi(x.id)).sort((a,b)=>a.nr-b.nr) : [];
+  /* Bare de ubesvarte hører hjemme her. Et «vet ikke» er avgitt, og å liste det
+     som «ikke plassert» ville mast om en plassering deltakeren nettopp har sagt
+     at hun ikke har grunnlag for. */
+  const un = min ? hyps.filter(x=>!ferdigVurdert(x)&&!utkast[x.id]).sort((a,b)=>a.nr-b.nr) : [];
   if(!un.length){ el.hidden=true; el.replaceChildren(); return; }
   el.hidden=false;
   el.replaceChildren(h("span",{},"Ikke plassert:"),
@@ -1227,13 +1334,16 @@ function setRate(id,dim,val){
   /* Et klikk på skalaen er en eksplisitt handling og vinner over et udratt
      utkast for samme hypotese. */
   const cur={...(utkast[id]||myRates[id]||{})}; delete utkast[id];
-  if(val) cur[dim]=val; else delete cur[dim];
-  myRates={...myRates}; if(cur.k||cur.u) myRates[id]=cur; else delete myRates[id];
+  if(harSvart(val)) cur[dim]=val; else delete cur[dim];
+  myRates={...myRates}; if(harSvart(cur.k)||harSvart(cur.u)) myRates[id]=cur; else delete myRates[id];
   pendingRate.add(id); render();
   clearTimeout(rateTimers[id]);
   rateTimers[id]=setTimeout(async()=>{
     const v=myRates[id]||{};
-    try{ await rpc("rate_hypothesis",{...auth(),p_id:id,p_k:v.k||null,p_u:v.u||null}); skrivingOk(); }
+    /* 0 er et svar, ikke et tomt felt. `v.k||null` ville sendt «vet ikke»
+       videre som «ikke besvart» og slettet raden. */
+    const nz = x => harSvart(x) ? x : null;
+    try{ await rpc("rate_hypothesis",{...auth(),p_id:id,p_k:nz(v.k),p_u:nz(v.u)}); skrivingOk(); }
     catch(e){ handleErr(e); }
     pendingRate.delete(id); lastSig=null;
   },350);
