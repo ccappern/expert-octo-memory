@@ -19,11 +19,6 @@ with sjekk(nr, hva, ok) as (values
      select 1 from information_schema.columns
       where table_schema='public' and table_name='hypotheses' and column_name='frist')),
 
-  ('0004', 'add_hypothesis tar imot p_eier', exists(
-     select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
-      where n.nspname='public' and p.proname='add_hypothesis'
-        and pg_get_function_arguments(p.oid) like '%p_eier%')),
-
   ('0004', 'update_hypothesis tar imot p_eier og p_frist', exists(
      select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
       where n.nspname='public' and p.proname='update_hypothesis'
@@ -73,9 +68,16 @@ with sjekk(nr, hva, ok) as (values
       where table_schema='public' and table_name='hypotheses' and column_name='nr'
         and is_nullable='YES')),
 
-  ('0012', 'publish_hypothesis finnes', exists(
+  -- 0012 innførte kladd. 0017 avviklet den igjen: hypotesene opprettes nå fra
+  -- backend, så publish_hypothesis skal være BORTE. Kolonnen publisert står
+  -- igjen fordi indeksene hviler på den.
+  ('0017', 'kladd er avviklet – publish_hypothesis er borte', not exists(
      select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
-      where n.nspname='public' and p.proname='publish_hypothesis')),
+      where n.nspname='public' and p.proname in ('publish_hypothesis','add_hypothesis'))),
+
+  ('0017', 'ingen publiserte hypoteser mangler nummer', not exists(
+     select 1 from public.hypotheses
+      where deleted_at is null and (nr is null or not publisert))),
 
   -- 0012 sjekket at get_board tok imot p_pid. Fra 0015 kommer identiteten fra
   -- auth-sesjonen i stedet, så funksjonen har ingen parametre i det hele tatt.
@@ -84,14 +86,16 @@ with sjekk(nr, hva, ok) as (values
       where n.nspname='public' and p.proname='get_board'
         and pg_get_function_arguments(p.oid) = '')),
 
-  ('0012', 'delete_hypothesis krever eierskap', exists(
+  -- 0012 krevde eierskap for sletting. 0017 fjernet delete_hypothesis helt:
+  -- deltakerne oppretter ikke lenger hypoteser, så det finnes ikke noe «mitt»
+  -- å slette. Fjerning skjer som arkivering fra backend.
+  ('0017', 'delete_hypothesis er fjernet', not exists(
      select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
-      where n.nspname='public' and p.proname='delete_hypothesis'
-        and pg_get_functiondef(p.oid) like '%42501%')),
+      where n.nspname='public' and p.proname='delete_hypothesis')),
 
-  ('0012', 'kun én utgave av get_board og add_hypothesis', (
+  ('0012', 'kun én utgave av get_board', (
      select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace
-      where n.nspname='public' and p.proname in ('get_board','add_hypothesis')) = 2),
+      where n.nspname='public' and p.proname = 'get_board') = 1),
 
   -- 0013 endrer bare data, ikke skjema. Derfor sjekkes radene den innførte.
   ('0013', 'eierskap er satt fra H-lista', (
@@ -154,10 +158,79 @@ with sjekk(nr, hva, ok) as (values
   ('0015', 'authenticated kan kjøre alle RPC-ene', (
      select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace
       where n.nspname='public'
-        and p.proname in ('get_board','add_hypothesis','update_hypothesis',
-                          'delete_hypothesis','rate_hypothesis','publish_hypothesis',
+        and p.proname in ('get_board','update_hypothesis','rate_hypothesis',
                           'min_profil','sett_navn')
-        and has_function_privilege('authenticated', p.oid, 'execute')) = 8),
+        and has_function_privilege('authenticated', p.oid, 'execute')) = 5),
+
+  -- ---------- 0017: leveranser, backend og arkiv ----------
+  ('0017', 'leveransene finnes som data', (
+     select count(*) from public.deliverables) >= 7),
+
+  ('0017', 'ingen hypotese står uten leveranse', not exists(
+     select 1 from public.hypotheses where deleted_at is null and leveranse is null)),
+
+  -- Uten fremmednøkkelen kan en leveranse slettes under føttene på hypotesene,
+  -- og tapet oppdages først når en rapport mangler rader.
+  ('0017', 'leveransen kan ikke slettes mens den er i bruk', exists(
+     select 1 from pg_constraint
+      where conrelid='public.hypotheses'::regclass and contype='f'
+        and conname='hypotheses_leveranse_fk')),
+
+  ('0017', 'sekundær leveranse krever primær', exists(
+     select 1 from pg_constraint
+      where conrelid='public.hypotheses'::regclass
+        and conname='hypotheses_leveranse_2_check')),
+
+  ('0017', 'admin-kolonnen finnes og minst én administrator er satt', exists(
+     select 1 from information_schema.columns
+      where table_schema='public' and table_name='participants' and column_name='admin')
+   and (select count(*) from public.participants where admin) > 0),
+
+  ('0017', 'private.meg_admin() stenger backend', exists(
+     select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+      where n.nspname='private' and p.proname='meg_admin')),
+
+  -- Alle sju admin-RPC-ene må finnes. Mangler én, feiler backend med «function
+  -- not found» på akkurat den knappen, og det ser ut som en klientfeil.
+  ('0017', 'alle admin-RPC-ene finnes', (
+     select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+      where n.nspname='public' and p.proname in
+        ('admin_sett_leveranse','admin_slett_leveranse','admin_add_hypothesis',
+         'admin_sett_hypothesis_leveranse','admin_arkiver_hypothesis',
+         'admin_gjenopprett_hypothesis','admin_arkiv')) = 7),
+
+  ('0017', 'anon kan ikke kjøre admin-RPC-ene', not exists(
+     select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+      where n.nspname='public' and p.proname like 'admin\_%'
+        and has_function_privilege('anon', p.oid, 'execute'))),
+
+  -- ---------- 0018: resultatvisning ----------
+  ('0018', 'resultatvisning finnes på workshopen', exists(
+     select 1 from information_schema.columns
+      where table_schema='public' and table_name='workshops' and column_name='resultatvisning')),
+
+  -- Det er filtreringen i get_board som ER sperren. Ligger den bare i
+  -- klienten, kan hvem som helst lese tallene med den publiserbare nøkkelen.
+  ('0018', 'get_board holder andres vurderinger tilbake', exists(
+     select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+      where n.nspname='public' and p.proname='get_board'
+        and pg_get_functiondef(p.oid) like '%etter_stemme%'
+        and pg_get_functiondef(p.oid) like '%tellinger%')),
+
+  ('0018', 'admin_sett_resultatvisning finnes', exists(
+     select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+      where n.nspname='public' and p.proname='admin_sett_resultatvisning')),
+
+  ('0018', 'navnet på den som la inn hypotesen sendes ikke ut', not exists(
+     select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+      where n.nspname='public' and p.proname='get_board'
+        and pg_get_functiondef(p.oid) like '%''by'', p.name%')),
+
+  ('0017', 'get_board leverer leveranse og admin-flagg', exists(
+     select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+      where n.nspname='public' and p.proname='get_board'
+        and pg_get_functiondef(p.oid) like '%h.leveranse%'
+        and pg_get_functiondef(p.oid) like '%''admin''%')),
 
   ('0016', 'de 21 inviterte har e-post', (
      select count(*) from public.participants where epost is not null) >= 21),
@@ -168,11 +241,17 @@ with sjekk(nr, hva, ok) as (values
         and (select count(*) from public.hypotheses h
               where h.created_by = p.id and h.deleted_at is null) > 0)),
 
-  ('0016', 'bare én Christoffer, og ingen testdeltakere igjen', (
+  -- Testdeltakere som eier en hypotese beholdes med vilje: sletting ville nullet
+  -- created_by via `on delete set null`, og da kan ingen redigere raden igjen.
+  -- «Test tester» eier én arkivert hypotese og blir derfor stående.
+  ('0016', 'bare én Christoffer, og ingen testdeltakere med data igjen', (
      select count(*) from public.participants where name ilike 'christoffer%') = 1
    and not exists(
-     select 1 from public.participants
-      where name in ('TEST A','TEST B','Test tester','Test Testkraft','Test, Testfirma'))),
+     select 1 from public.participants p
+      where p.name in ('TEST A','TEST B','Test tester','Test Testkraft','Test, Testfirma')
+        and (exists (select 1 from public.ratings r where r.participant_id = p.id)
+          or exists (select 1 from public.hypotheses h
+                      where h.created_by = p.id and h.deleted_at is null)))),
 
   -- Sammenslåingen flytter created_by og status_av FØR tapere slettes. Gjøres
   -- det i motsatt rekkefølge, nulles eierskapet av `on delete set null`, og da

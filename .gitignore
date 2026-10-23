@@ -46,6 +46,12 @@ supabase/migrations/0013_eierskap_og_to_nye.sql
 # ---------------------------------------------------------------------------
 supabase/migrations/0016_invitasjonsliste.sql
 
+# Samme grunn: 0017 utpeker administratorene ved e-postadresse. Tre navngitte
+# personer, og samtidig en opplysning om hvem som har skriverettigheter til
+# hele registeret. Skjemaendringen i den ligger i sin helhet i reparer.sql,
+# som er fri for personopplysninger — repoet mister altså ingen struktur.
+supabase/migrations/0017_backend_og_leveranser.sql
+
 # Arbeidsfiler med hypotesetekst hentet ut av Confluence eller registeret.
 # Samme begrunnelse som over: innholdet er ikke klarert for offentliggjøring.
 *_tmp.md

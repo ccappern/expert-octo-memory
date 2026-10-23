@@ -16,9 +16,11 @@ Statisk side på GitHub Pages mot en Supabase-database i Stockholm (eu-north-1).
 
 Bevisste valg. Ikke bryt dem uten å spørre:
 
-1. **Hele appen er én fil: `index.html`.** Ingen byggesteg, ingen pakkebehandler, ingen
-   bundler, ingen CDN. `config.js` er eneste andre klientfil, og inneholder bare URL og
-   publishable key.
+1. **Appen for deltakerne er én fil: `index.html`.** Ingen byggesteg, ingen pakkebehandler,
+   ingen bundler, ingen CDN. `config.js` inneholder bare URL og publishable key.
+   `admin.html` er det eneste bevisste unntaket: backend har et annet publikum, et annet
+   livsløp, og skal ikke lastes ned av seksten deltakere som bare skal stemme. Den følger
+   ellers nøyaktig samme konvensjoner, og gjenbruker innloggingen uendret.
 2. **Ingen rammeverk.** Vanilla JS og vanlig CSS. Ingen React/Vue/Tailwind. DOM bygges med
    hjelperen `h()` og `s_()` for SVG.
 3. **All tekst på norsk (bokmål).** Brukerrettet tekst *og* kodekommentarer.
@@ -178,10 +180,25 @@ console.log("OK")'
   kritisk, og det er nettopp derfor den er et premiss.
 - **Avklart status krever belegg.** Håndheves både i klienten og i RPC-en, fordi regelen skal
   gjelde uansett klient.
-- **Gruppens snitt vises ikke i «Min vurdering».** Ser du hvor flertallet ligger mens du
-  stemmer, havner du der selv.
+- **Gruppens snitt skjules mens folk stemmer, og sperren ligger i databasen.** Ser du hvor
+  flertallet ligger mens du stemmer, havner du der selv. `workshops.resultatvisning` har tre
+  moduser: `lukket` (bare antall), `etter_stemme` (tallene åpnes per hypotese når du selv har
+  vurdert den) og `apent`. `get_board` filtrerer radene før de sendes — filtrerer du bare i
+  klienten, kan hvem som helst lese tallene med den publiserbare nøkkelen i `config.js`.
+  Antallet vurderinger sendes alltid, i en egen `tellinger`-liste: det anker ingen retning.
+- **Hvem som la inn en hypotese sendes ikke ut.** Registeret vedlikeholdes fra backend, og
+  forfatteren er verken relevant eller noe deltakerne skal forholde seg til.
 - **Eierlista ligger i `EIERE` i `index.html`, ikke som CHECK i databasen.** Teamnavn endrer
   seg midt i et prosjekt, og en omdøping skal ikke kreve migrasjon.
+- **Leveransene ligger derimot i databasen (`public.deliverables`), ikke i klienten.** Det er
+  motsatt av `EIERE`, og med vilje: kilden på Confluence har ødelagt nummerering og uavklart
+  overlapp mellom to leveranser, så lista rettes flere ganger. Slug er nøkkelen, `nr` er bare
+  presentasjon. Derfor koster en omnummerering null migrasjoner.
+- **`admin.html` er ikke tilgangskontroll.** Fila ligger offentlig lesbar på GitHub Pages.
+  Det er `private.meg_admin()` som stenger døra. Legger du til en ny admin-funksjon, må den
+  starte med `meg_admin()` — ikke stol på at knappen er skjult.
+- **Hypoteser slettes aldri, de arkiveres** (`deleted_at`). En ekte `delete` tar med seg alle
+  vurderingene via cascade, og det finnes ingen angreknapp midt i en workshop.
 
 ## Publisering
 

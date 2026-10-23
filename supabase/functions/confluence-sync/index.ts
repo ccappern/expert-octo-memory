@@ -22,9 +22,6 @@ const ANDEL = 0.30;
 const SPRIK = 4;
 const MIN_STEMMER = 3;
 
-const TYPER: Record<string, string> = {
-  verdi: "Verdi", gjennom: "Gjennomførbarhet", levedykt: "Levedyktighet", aksept: "Aksept",
-};
 const STATUS: Record<string, string> = {
   ny: "Ny", testes: "Testes", bekreftet: "Bekreftet", avkreftet: "Avkreftet",
 };
@@ -41,10 +38,12 @@ async function likt(gitt: string, fasit: string) {
 
 type Hyp = {
   id: string; nr: number; tekst: string; kriterium: string; type: string; status: string;
+  leveranse: string | null; leveranse_2: string | null;
   kilde: string; eier: string; frist: string | null;
   status_notat: string; status_endret: string | null; status_av: string | null;
   by: string | null; created_at: string;
 };
+type Lev = { slug: string; nr: number; label: string };
 type Rate = { hypothesis_id: string; participant_id: string; k: number | null; u: number | null };
 
 const esc = (s: unknown) => String(s ?? "")
@@ -89,7 +88,30 @@ function stats(h: Hyp, rates: Rate[]) {
     forst: k != null && u != null && k > MIDT && u > MIDT,
   };
 }
-type Rad = Hyp & ReturnType<typeof stats>;
+type Rad = Hyp & ReturnType<typeof stats> & {
+  levNr: number; levLabel: string; levCelle: string;
+};
+
+const UTEN = "Uten leveranse";
+// Hypoteser uten leveranse skal sist, uansett hvor høyt leveransene nummereres.
+const SIST = 1e6;
+
+/** Leveransen er det styringsgruppen beslutter på, så den vises med label og
+ *  ikke med slug. Den sekundære står i parentes: den sier noe om hvor funnet
+ *  også får konsekvenser, men den skal ikke konkurrere med den primære. */
+function medLeveranse(r: Hyp & ReturnType<typeof stats>, levs: Map<string, Lev>): Rad {
+  const p = r.leveranse ? levs.get(r.leveranse) : undefined;
+  const s = r.leveranse_2 ? levs.get(r.leveranse_2) : undefined;
+  const label = p?.label ?? (r.leveranse ?? "");
+  return {
+    ...r,
+    levNr: p ? p.nr : SIST,
+    levLabel: label || UTEN,
+    levCelle: label
+      ? esc(label) + (s ? ` <em>(og ${esc(s.label)})</em>` : "")
+      : "",
+  };
+}
 
 // ---------------------------------------------------------------- tabeller
 type Kol = [string, (r: Rad) => string];
@@ -105,8 +127,8 @@ const K: Record<string, Kol> = {
 };
 
 function tabell(rader: Rad[], kol: Kol[]) {
-  const hode = ["Nr", "Type", "Vi tror at", ...kol.map((c) => c[0]), "Kilde"];
-  const rad = (r: Rad) => `<tr><td>${esc(nr(r.nr))}</td><td>${esc(TYPER[r.type] ?? "")}</td>` +
+  const hode = ["Nr", "Leveranse", "Vi tror at", ...kol.map((c) => c[0]), "Kilde"];
+  const rad = (r: Rad) => `<tr><td>${esc(nr(r.nr))}</td><td>${r.levCelle}</td>` +
     `<td>${avsnitt(r.tekst)}</td>${kol.map((c) => `<td>${c[1](r)}</td>`).join("")}` +
     `<td>${avsnitt(r.kilde)}</td></tr>`;
   return `<table><tbody><tr>${hode.map((h) => `<th>${esc(h)}</th>`).join("")}</tr>` +
@@ -162,9 +184,10 @@ function kpier(rader: Rad[], deltakere: number) {
 }
 
 // ---------------------------------------------------------------- siden
-function byggSide(hyps: Hyp[], rates: Rate[]) {
+function byggSide(hyps: Hyp[], rates: Rate[], levs: Lev[]) {
+  const lev = new Map(levs.map((l) => [l.slug, l]));
   const rader: Rad[] = hyps
-    .map((h) => ({ ...h, ...stats(h, rates) }))
+    .map((h) => medLeveranse({ ...h, ...stats(h, rates) }, lev))
     .sort((a, b) => a.nr - b.nr);
   const deltakere = new Set(rates.filter((r) => r.k != null || r.u != null).map((r) => r.participant_id)).size;
 
@@ -219,12 +242,14 @@ function byggSide(hyps: Hyp[], rates: Rate[]) {
   return { info: enkelt(info), innhold: kpier(rader, deltakere) + enkelt(innhold) };
 }
 
-/** Hele registeret i én tabell, for den som vil se alt samlet. Individuelle
- *  vurderinger er ikke med — bare snitt, antall og uenighetsflagget. */
+/** Hele registeret, gruppert etter leveranse. Grupperingen er poenget: en
+ *  leveranse uten evidens skal være synlig som et hull, ikke drukne i en lang
+ *  liste. Individuelle vurderinger er ikke med — bare snitt, antall og
+ *  uenighetsflagget. */
 function alleTabell(rader: Rad[]) {
-  const hode = ["Nr", "Type", "Vi tror at", "Vi vet det når", "Status", "Belegg", "Avklart",
+  const hode = ["Nr", "Vi tror at", "Vi vet det når", "Status", "Belegg", "Avklart",
     "Eier", "Frist", "Kritisk", "Usikker", "Usikker vurdert", "Vurderinger", "Vet ikke", "Uenige", "Kilde", "Lagt inn av"];
-  const rad = (r: Rad) => `<tr><td>${esc(nr(r.nr))}</td><td>${esc(TYPER[r.type] ?? "")}</td>` +
+  const rad = (r: Rad) => `<tr><td>${esc(nr(r.nr))}</td>` +
     `<td>${avsnitt(r.tekst)}</td><td>${avsnitt(r.kriterium)}</td>` +
     `<td>${esc(STATUS[r.status] ?? r.status)}</td><td>${avsnitt(r.status_notat)}</td>` +
     `<td>${esc(r.status_endret ? dato(r.status_endret) + (r.status_av ? " / " + r.status_av : "") : "")}</td>` +
@@ -232,10 +257,26 @@ function alleTabell(rader: Rad[]) {
     `<td>${tall(r.k)}</td><td>${tall(r.u)}</td><td>${tall(r.uRaa)}</td>` +
     `<td>${r.n}</td><td>${r.vetIkke || ""}</td><td>${r.uenig ? "Ja" : ""}</td>` +
     `<td>${avsnitt(r.kilde)}</td><td>${esc(r.by ?? "")}</td></tr>`;
-  return `<h2>Alle hypoteser</h2><p>Hele registeret samlet. «Usikker» er overstyrt til 1 for ` +
-    `avklarte hypoteser; «Usikker vurdert» er det deltakerne faktisk stemte. Individuelle ` +
-    `vurderinger publiseres ikke.</p><table><tbody><tr>${hode.map((h) => `<th>${esc(h)}</th>`).join("")}</tr>` +
-    rader.map(rad).join("") + `</tbody></table>`;
+
+  const grupper = new Map<string, { nr: number; label: string; rader: Rad[] }>();
+  for (const r of rader) {
+    // Nøkkelen tar med labelen: en hypotese kan peke på en leveranse som er
+    // slettet fra lista, og den skal ikke smelte sammen med «Uten leveranse».
+    const n = `${r.levNr}|${r.levLabel}`;
+    const g = grupper.get(n) ?? { nr: r.levNr, label: r.levLabel, rader: [] };
+    g.rader.push(r);
+    grupper.set(n, g);
+  }
+  const deler = [...grupper.values()]
+    .sort((a, b) => a.nr - b.nr || a.label.localeCompare(b.label, "nb"))
+    .map((g) => `<h3>${esc(g.label)}</h3>` +
+      `<table><tbody><tr>${hode.map((h) => `<th>${esc(h)}</th>`).join("")}</tr>` +
+      g.rader.map(rad).join("") + `</tbody></table>`);
+
+  return `<h2>Alle hypoteser</h2><p>Hele registeret samlet, gruppert etter leveransen ` +
+    `hypotesen hører til. «Usikker» er overstyrt til 1 for avklarte hypoteser; ` +
+    `«Usikker vurdert» er det deltakerne faktisk stemte. Individuelle vurderinger ` +
+    `publiseres ikke.</p>` + deler.join("");
 }
 
 // ---------------------------------------------------------------- Confluence
@@ -256,7 +297,7 @@ Deno.serve(async (req) => {
   }
 
   const { data: hyps, error: e1 } = await sb.from("hypotheses")
-    .select("id, nr, tekst, kriterium, type, status, kilde, eier, frist, status_notat, status_endret, status_av, created_by, created_at")
+    .select("id, nr, tekst, kriterium, type, leveranse, leveranse_2, status, kilde, eier, frist, status_notat, status_endret, status_av, created_by, created_at")
     .is("deleted_at", null)
     // Kladd er personlig og har ikke engang fått nummer ennå. Den hører ikke
     // hjemme på en side resten av prosjektet leser.
@@ -265,6 +306,9 @@ Deno.serve(async (req) => {
 
   const { data: rates, error: e2 } = await sb.from("ratings").select("hypothesis_id, participant_id, k, u");
   if (e2) return Response.json({ ok: false, steg: "les vurderinger", feil: e2.message }, { status: 500 });
+
+  const { data: levs, error: e3 } = await sb.from("deliverables").select("slug, nr, label").order("nr");
+  if (e3) return Response.json({ ok: false, steg: "les leveranser", feil: e3.message }, { status: 500 });
 
   const { data: deltakere } = await sb.from("participants").select("id, name");
   const navn = new Map((deltakere ?? []).map((p: { id: string; name: string }) => [p.id, p.name]));
@@ -276,7 +320,7 @@ Deno.serve(async (req) => {
     status_av: h.status_av ? (navn.get(String(h.status_av)) ?? null) : null,
   })) as Hyp[];
 
-  const side = byggSide(rader, (rates ?? []).filter((r: Rate) => levende.has(r.hypothesis_id)) as Rate[]);
+  const side = byggSide(rader, (rates ?? []).filter((r: Rate) => levende.has(r.hypothesis_id)) as Rate[], (levs ?? []) as Lev[]);
   const html = `<ac:layout>${side.info}${side.innhold}</ac:layout>`;
 
   // ?dry=1 gir den ferdige siden uten å røre Confluence (til testing)

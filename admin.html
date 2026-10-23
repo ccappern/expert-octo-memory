@@ -1,0 +1,757 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Backend · Nordlys hypoteseregister</title>
+<meta name="robots" content="noindex,nofollow">
+<style>
+/* Én kolonne, i motsetning til hovedsiden. Her gjøres én ting av gangen av én
+   person, og ingenting oppdaterer seg live mens man ser på — da er det ingen
+   grunn til å dele flaten opp. */
+:root{
+  --bg:#eef3f6; --surface:#ffffff; --sunk:#e3eaef; --ink:#13202a; --muted:#566775; --line:#d3dde4;
+  --accent:#0d7565; --accent-ink:#ffffff; --accent-soft:#d5ede7;
+  --t-verdi:#0d7565; --t-gjennom:#2f64a8; --t-levedykt:#6a4bb0; --t-aksept:#a45a12; --t-tilp:#a8326f;
+  --ok:#2c7a34; --bad:#b0281f; --warnbg:#fbeedd; --warn:#8a4a0c;
+  --f-display:"Familjen Grotesk","Helvetica Neue",Arial,sans-serif;
+  --f-body:system-ui,-apple-system,"Segoe UI","Helvetica Neue",Arial,sans-serif;
+  --f-mono:ui-monospace,Menlo,Consolas,monospace;
+  --r:10px; color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#0c141a; --surface:#142029; --sunk:#0f1a22; --ink:#e3ecf1; --muted:#93a5b2; --line:#253541;
+  --accent:#4cc9ad; --accent-ink:#06231d; --accent-soft:#143a32;
+  --t-verdi:#4cc9ad; --t-gjennom:#77a8ee; --t-levedykt:#ad94f2; --t-aksept:#e3a35c; --t-tilp:#ef8fbd;
+  --ok:#7ccf84; --bad:#f08a80; --warnbg:#3a2a16; --warn:#f0bf86; color-scheme:dark}}
+
+*{box-sizing:border-box}
+html{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5}
+[hidden]{display:none!important}
+.wrap{max-width:1100px;margin:0 auto;padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:max(20px,env(safe-area-inset-right,0px))}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+h1,h2,h3{font-family:var(--f-display)}
+
+/* ---------- topplinje ---------- */
+header.top{background:var(--surface);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:12}
+header.top .wrap{display:flex;align-items:center;gap:20px;min-height:60px;flex-wrap:wrap}
+.brand{display:flex;align-items:baseline;gap:12px;min-width:0}
+h1{font-size:19px;font-weight:700;margin:0;letter-spacing:-.01em;white-space:nowrap}
+.eyebrow{font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:600;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tilbake{font-size:13.5px;color:var(--accent);text-decoration:none;white-space:nowrap}
+.tilbake:hover{text-decoration:underline}
+.top-actions{margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.me{font-size:13px;color:var(--muted);max-width:22ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+button.ghost{background:none;border:1px solid transparent;border-radius:8px;padding:6px 10px;cursor:pointer;color:var(--muted);font-size:13px}
+button.ghost:hover{background:var(--sunk);color:var(--ink)}
+button.primary{background:var(--accent);color:var(--accent-ink);border:0;border-radius:8px;padding:8px 14px;cursor:pointer;font-weight:600}
+button.primary:hover{filter:brightness(1.07)}
+button.primary:disabled{opacity:.5;cursor:default}
+button.liten{padding:4px 10px;font-size:13px}
+
+/* ---------- seksjoner ---------- */
+.seksjon{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px;margin:18px 0}
+.seksjon > h2{font-size:18px;margin:0 0 4px;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.seksjon > h2 .c{font-size:13px;color:var(--muted);font-weight:400;font-variant-numeric:tabular-nums}
+.seksjon .lede{margin:0 0 14px;color:var(--muted);font-size:13.5px}
+.valg{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:9px;
+  padding:10px 12px;margin-bottom:7px;cursor:pointer;background:var(--bg)}
+.valg.valgt{border-color:var(--accent);background:var(--accent-soft)}
+.valg input{margin:3px 0 0;flex:none;accent-color:var(--accent);width:auto}
+.valg strong{display:block;font-size:14px}
+.valg .hjelp{display:block;font-size:12.5px;color:var(--muted);line-height:1.4;margin-top:2px}
+.spacer{flex:1}
+
+.field{display:grid;gap:4px;min-width:0}
+.field label{font-size:13px;font-weight:600}
+.field input,.field select,.field textarea{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:9px 11px;width:100%}
+.field textarea{resize:vertical;min-height:44px}
+.opt{font-weight:400;color:var(--muted)}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:end}
+.row .field{flex:1 1 180px}
+.help{font-size:13px;color:var(--muted);margin:0}
+.help.spam{background:var(--warnbg);color:var(--ink);border-radius:8px;padding:10px 12px;line-height:1.5}
+.help.spam code{font-size:12.5px;background:var(--surface);padding:1px 5px;border-radius:4px}
+.linkbtn{background:none;border:0;padding:0;color:var(--accent);cursor:pointer;font-size:13px;text-align:left}
+.linkbtn:hover{text-decoration:underline}
+.linkbtn.danger{color:var(--bad)}
+.search{width:100%;border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:8px 11px;margin-bottom:12px}
+
+/* ---------- rader ---------- */
+.rad{border:1px solid var(--line);border-left:4px solid var(--line);border-radius:var(--r);
+  padding:11px 13px;display:grid;gap:8px;margin-bottom:9px;min-width:0;background:var(--surface)}
+.rad.ubrukt{border-left-color:var(--accent)}
+.rad-topp{display:flex;align-items:center;gap:9px;flex-wrap:wrap;font-size:12.5px}
+.nr{font-family:var(--f-mono);font-weight:600;color:var(--muted)}
+.slug{font-family:var(--f-mono);font-size:12.5px;color:var(--muted)}
+.badge{font-size:11px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;padding:2px 8px;border-radius:999px;
+  background:var(--sunk);color:var(--muted)}
+.badge.w{background:var(--warnbg);color:var(--warn)}
+.tekst{margin:0;font-size:15px}
+/* Nummeret er to siffer og skal ikke ta en hel kolonne i rutenettet. */
+.lev-felt{display:grid;grid-template-columns:76px minmax(0,1.2fr) minmax(0,1.6fr);gap:9px;align-items:end}
+.hake{display:flex;align-items:center;gap:7px;font-size:13px;white-space:nowrap}
+.hake input{width:auto;accent-color:var(--accent)}
+.lev-valg{display:flex;flex-wrap:wrap;gap:9px;align-items:end}
+.lev-valg .field{flex:1 1 220px}
+.ingen{color:var(--muted);font-style:italic;font-size:13.5px;margin:0}
+
+/* ---------- innlogging ---------- */
+.login{max-width:440px;margin:60px auto;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:26px;display:grid;gap:14px}
+.login h2{margin:0;font-size:22px}
+.err{color:var(--bad);font-size:13.5px;margin:0}
+
+/* Nektet tilgang er ikke en feil brukeren har gjort, og skal ikke se ut som en. */
+.nektet{max-width:520px;margin:60px auto;background:var(--surface);border:1px solid var(--line);
+  border-radius:var(--r);padding:26px;display:grid;gap:12px}
+.nektet h2{margin:0;font-size:21px}
+
+.banner{background:var(--warnbg);color:var(--warn);border:1px solid var(--warn);border-radius:8px;
+  padding:9px 13px;margin:14px 0;font-size:13.5px;display:flex;align-items:center;gap:10px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);
+  padding:10px 16px;border-radius:8px;font-size:14px;z-index:20;max-width:calc(100% - 32px)}
+
+@media (max-width:700px){
+  header.top{position:static}
+  .lev-felt{grid-template-columns:minmax(0,1fr)}
+}
+</style>
+</head>
+<body>
+
+<header class="top"><div class="wrap">
+  <div class="brand">
+    <h1>Backend</h1>
+    <a class="tilbake" href="index.html">← Hypoteseregisteret</a>
+  </div>
+  <div class="top-actions" id="nav" hidden>
+    <span class="me" id="me-name"></span>
+    <button class="ghost" id="oppfrisk" type="button">Hent på nytt</button>
+    <button class="ghost" id="logout">Logg ut</button>
+  </div>
+</div></header>
+
+<main class="wrap">
+  <div id="banner" class="banner" role="alert" hidden></div>
+
+  <section id="view-login">
+    <form class="login" id="login" autocomplete="off">
+      <h2>Logg inn</h2>
+      <div class="field" id="steg-epost">
+        <label for="l-epost">E-postadressen din</label>
+        <input id="l-epost" type="email" required autocomplete="email" spellcheck="false"
+               placeholder="fornavn.etternavn@selskap.no">
+      </div>
+      <div class="field" id="steg-kode" hidden>
+        <label for="l-kode">Koden fra e-posten</label>
+        <input id="l-kode" inputmode="numeric" autocomplete="one-time-code" maxlength="8"
+               spellcheck="false" placeholder="8 siffer">
+        <p class="help" id="l-sendt"></p>
+        <p class="help spam"><strong>Finner du den ikke? Sjekk søppelpost.</strong>
+          Avsenderen er <code>noreply@n0rdlys.no</code>, et nytt domene uten sendehistorikk,
+          så e-posten havner ofte der første gang. Søk på «Innloggingskode».</p>
+      </div>
+      <button class="primary" id="l-go" type="submit">Send meg kode</button>
+      <button class="linkbtn" id="l-harkode" type="button" hidden>Jeg har allerede en kode</button>
+      <button class="linkbtn" id="l-nykode" type="button" hidden>Send meg en ny kode</button>
+      <button class="linkbtn" id="l-bytt" type="button" hidden>Bytt e-postadresse</button>
+      <p class="err" id="l-err" hidden></p>
+      <p class="help">Backend er for dem som forvalter registeret. Er du her for å vurdere
+        hypoteser, hører du hjemme på <a href="index.html">hypoteseregisteret</a>.</p>
+    </form>
+  </section>
+
+  <section class="nektet" id="view-nektet" hidden>
+    <h2>Du har ikke tilgang til backend</h2>
+    <p class="help">Du er logget inn, men kontoen din er ikke administrator. Backend brukes til
+      å forvalte leveranser og hypoteser — alt arbeidet i workshopen gjøres på
+      <a href="index.html">hypoteseregisteret</a>.</p>
+    <p class="help">Trenger du tilgang, si fra til prosjektleder.</p>
+  </section>
+
+  <div id="app" hidden>
+    <section class="seksjon">
+      <h2>Resultatvisning</h2>
+      <p class="lede">Styrer hva deltakerne ser mens de vurderer. Sperren ligger i databasen,
+        ikke i nettleseren — tallene sendes ikke ut før modusen tillater det.</p>
+      <div id="vis-valg"></div>
+    </section>
+
+    <section class="seksjon">
+      <h2>Leveranser <span class="c" id="lev-c"></span></h2>
+      <p class="lede">Nummeret styrer rekkefølgen overalt ellers. Kortnavnet er nøkkelen
+        hypotesene peker på, og kan ikke endres — opprett heller en ny og flytt hypotesene.</p>
+      <div id="lev-liste"></div>
+      <form class="row" id="lev-ny" autocomplete="off">
+        <div class="field" style="flex:0 0 150px">
+          <label for="n-slug">Kortnavn</label>
+          <input id="n-slug" maxlength="31" placeholder="forankring" spellcheck="false" required>
+        </div>
+        <div class="field" style="flex:0 0 90px">
+          <label for="n-nr">Nr</label>
+          <input id="n-nr" type="number" min="1" max="99" required>
+        </div>
+        <div class="field">
+          <label for="n-label">Navn</label>
+          <input id="n-label" maxlength="120" placeholder="Forankring hos sentrale aktører" required>
+        </div>
+        <div class="field">
+          <label for="n-hint">Hjelpetekst <span class="opt">valgfritt</span></label>
+          <input id="n-hint" maxlength="300" placeholder="Hvilket spørsmål skal leveransen svare på?">
+        </div>
+        <label class="hake"><input id="n-valgbar" type="checkbox" checked> Kan velges</label>
+        <button class="primary" type="submit">Legg til</button>
+      </form>
+    </section>
+
+    <section class="seksjon">
+      <h2>Hypoteser <span class="c" id="hyp-c"></span></h2>
+      <p class="lede">Teksten rettes på hypoteseregisteret. Her settes koblingen til leveranse,
+        og hypoteser som ikke lenger hører hjemme i grunnlaget arkiveres.</p>
+      <input class="search" id="q" type="search" placeholder="Søk i nummer, tekst og leveranse …" aria-label="Søk">
+      <div id="hyp-liste"></div>
+      <form class="seksjon" id="hyp-ny" autocomplete="off" style="margin-bottom:0">
+        <h2>Ny hypotese</h2>
+        <div class="field">
+          <label for="h-tekst">Vi tror at …</label>
+          <textarea id="h-tekst" rows="2" maxlength="1000" required
+            placeholder="nettselskapene vil dele hendelser med hverandre når KraftCERT er tillitsanker"></textarea>
+        </div>
+        <div class="field" style="margin-top:10px">
+          <label for="h-krit">Vi vet det når … <span class="opt">valgfritt</span></label>
+          <textarea id="h-krit" rows="2" maxlength="1000"
+            placeholder="minst tre selskaper har sagt ja til å delta i en pilot"></textarea>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <div class="field"><label for="h-lev">Leveranse</label><span id="h-lev-wrap"></span></div>
+          <div class="field"><label for="h-lev2">Sekundær leveranse <span class="opt">valgfritt</span></label><span id="h-lev2-wrap"></span></div>
+          <div class="field" style="flex:0 0 160px">
+            <label for="h-frist">Frist <span class="opt">valgfritt</span></label>
+            <input id="h-frist" type="date">
+          </div>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <div class="field">
+            <label for="h-eier">Eier <span class="opt">valgfritt</span></label>
+            <input id="h-eier" maxlength="200" placeholder="Team 2">
+          </div>
+          <div class="field">
+            <label for="h-kilde">Kilde <span class="opt">valgfritt</span></label>
+            <input id="h-kilde" maxlength="300" placeholder="docs/forprosjekt/… eller referat #3">
+          </div>
+          <button class="primary" id="h-add" type="submit">Legg til</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="seksjon">
+      <h2>Arkiv <span class="c" id="ark-c"></span></h2>
+      <p class="lede">Arkiverte hypoteser er tatt ut av grunnlaget, men vurderingene står igjen.
+        Gjenopprettes de, er stemmene fortsatt der.</p>
+      <div id="ark-liste"></div>
+    </section>
+  </div>
+</main>
+
+<div class="toast" id="toast" hidden></div>
+
+<script src="config.js"></script>
+<script>
+(function(){
+const CFG = window.NORDLYS_CONFIG;
+
+const SKEY = "nordlys-hyp-session";
+let session=null;
+let board=null, arkiv=[], query="";
+
+const $ = id => document.getElementById(id);
+function h(tag, attrs, ...kids){
+  const el=document.createElement(tag);
+  for(const [k,v] of Object.entries(attrs||{})){
+    if(v==null||v===false) continue;
+    if(k==="class") el.className=v;
+    else if(k==="style") el.setAttribute("style",v);
+    else if(k.startsWith("on")) el.addEventListener(k.slice(2),v);
+    else el.setAttribute(k, v===true?"":v);
+  }
+  for(const c of kids.flat()){ if(c==null||c===false) continue; el.append(c.nodeType?c:document.createTextNode(String(c))); }
+  return el;
+}
+let toastT;
+function toast(msg){ const t=$("toast"); t.textContent=msg; t.hidden=false; clearTimeout(toastT); toastT=setTimeout(()=>t.hidden=true,3600); }
+const nr = n => "H-"+String(n||0).padStart(2,"0");
+function store(get,val){ try{ if(get) return JSON.parse(localStorage.getItem(SKEY)||"null"); if(val) localStorage.setItem(SKEY,JSON.stringify(val)); else localStorage.removeItem(SKEY);}catch(e){ return null; } }
+
+/* ---------- API ---------- */
+/* Hentet uendret fra index.html. Innloggingen er den samme sesjonen under den
+   samme nøkkelen, og to varianter av den ville før eller siden kommet i utakt
+   om token-fornyelsen. */
+async function gotrue(sti, body){
+  const r = await fetch(`${CFG.supabaseUrl}/auth/v1/${sti}`, {
+    method:"POST", headers:{apikey:CFG.supabaseKey,"Content-Type":"application/json"},
+    body:JSON.stringify(body)
+  });
+  const text = await r.text();
+  let d=null; try{ d=text?JSON.parse(text):null; }catch(e){}
+  if(!r.ok){
+    const e=new Error((d&&(d.error_description||d.msg||d.message))||("HTTP "+r.status));
+    e.status=r.status; e.kode=d&&(d.error_code||d.error); throw e;
+  }
+  return d;
+}
+
+let fornyer=null;
+async function fornyToken(){
+  /* Sperren er like nødvendig her som på hovedsiden: to samtidige fornyelser
+     ville brukt hvert sitt refresh-token, og det andre ble ugyldig i det første
+     gikk gjennom. */
+  if(fornyer) return fornyer;
+  fornyer = (async()=>{
+    try{
+      const d = await gotrue("token?grant_type=refresh_token", {refresh_token:session.refresh_token});
+      session = {...session, access_token:d.access_token, refresh_token:d.refresh_token,
+                 utloper: Date.now() + (d.expires_in||3600)*1000};
+      store(false, session);
+      return true;
+    }catch(e){ return false; }
+    finally{ fornyer=null; }
+  })();
+  return fornyer;
+}
+
+async function rpc(fn, args, nyttForsok){
+  if(session && session.utloper && Date.now() > session.utloper - 60000 && !nyttForsok){
+    if(!await fornyToken()){ toast("Innloggingen er utløpt. Logg inn på nytt."); logout(); throw new Error("utlogget"); }
+  }
+  const h = {apikey:CFG.supabaseKey, "Content-Type":"application/json"};
+  if(session && session.access_token) h.Authorization = "Bearer "+session.access_token;
+  const r = await fetch(`${CFG.supabaseUrl}/rest/v1/rpc/${fn}`, {
+    method:"POST", headers:h, body:JSON.stringify(args||{})
+  });
+  const text = await r.text();
+  let body=null; try{ body=text?JSON.parse(text):null; }catch(e){}
+  if(r.status===401 && !nyttForsok && session && session.refresh_token){
+    if(await fornyToken()) return rpc(fn, args, true);
+    toast("Innloggingen er utløpt. Logg inn på nytt."); logout(); throw new Error("utlogget");
+  }
+  if(!r.ok){ const e=new Error((body&&body.message)||("HTTP "+r.status)); e.status=r.status; e.code=body&&body.code; throw e; }
+  return body;
+}
+
+/* Meldingene fra admin-RPC-ene er skrevet for å bli lest av den som utløste dem
+   — «10 hypoteser er koblet til leveransen. Flytt dem før du sletter den.» sier
+   både hva som er galt og hva som må gjøres. Å erstatte dem med en egen tekst
+   her ville gjort dem dårligere. */
+function handleErr(e){
+  if(e.message==="utlogget") return;
+  if(e.code==="28000"){ toast(e.message); logout(); return; }
+  if(e.code==="42501"){ toast(e.message||"Du har ikke tilgang til backend"); visNektet(); return; }
+  if(e.code==="PGRST202"){
+    showBanner("Databasen mangler en funksjon backend bruker. Kjør supabase/migrations/0017_backend_og_leveranser.sql, "+
+               "og deretter: notify pgrst, 'reload schema';");
+    return;
+  }
+  toast(e.message && !/^HTTP/.test(e.message) ? e.message : "Fikk ikke kontakt med serveren. Prøv igjen.");
+}
+function showBanner(msg){
+  const el=$("banner");
+  el.replaceChildren(h("span",{},msg), h("span",{class:"spacer"}),
+    h("button",{class:"ghost",type:"button",onclick:()=>{el.hidden=true;}},"Lukk"));
+  el.hidden=false;
+}
+
+/* ---------- data ---------- */
+const leveranser = () => (board && board.leveranser) || [];
+const hypoteser  = () => (board && board.hypotheses) || [];
+const levNavn = slug => {
+  if(!slug) return "";
+  const d=leveranser().find(x=>x.slug===slug);
+  return d ? `${d.nr}. ${d.label}` : `${slug} (ukjent)`;
+};
+/* Antall koblinger avgjør om en leveranse kan slettes, så den må telles på
+   nøyaktig samme måte som admin_slett_leveranse gjør det: primær og sekundær
+   teller likt. */
+const bruktAv = slug => hypoteser().filter(x=>x.leveranse===slug||x.leveranse_2===slug).length;
+
+async function hentAlt(){
+  board = await rpc("get_board");
+  /* Arkivet er en egen admin-RPC. Hentes det for en som ikke er admin, kastes
+     42501 og hele siden faller over til nektet-visningen — derfor stilles
+     spørsmålet om tilgang før kallet, ikke etter. */
+  arkiv = board.admin ? (await rpc("admin_arkiv")) : [];
+}
+async function refresh(){
+  try{
+    await hentAlt();
+    if(!board.admin){ visNektet(); return; }
+    render();
+  }catch(e){ handleErr(e); }
+}
+
+/* ---------- leveranser ---------- */
+function levRad(d){
+  const n=bruktAv(d.slug);
+  const sid=`lev-${d.slug}`;
+  const felt = h("div",{class:"lev-felt"},
+    h("div",{class:"field"},h("label",{for:sid+"-nr"},"Nr"),
+      h("input",{id:sid+"-nr",type:"number",min:"1",max:"99",value:String(d.nr)})),
+    h("div",{class:"field"},h("label",{for:sid+"-label"},"Navn"),
+      h("input",{id:sid+"-label",maxlength:"120",value:d.label||""})),
+    h("div",{class:"field"},h("label",{for:sid+"-hint"},"Hjelpetekst"),
+      h("input",{id:sid+"-hint",maxlength:"300",value:d.hint||""})));
+  const valgbar = h("input",{id:sid+"-valgbar",type:"checkbox",checked:d.valgbar!==false});
+
+  return h("div",{class:"rad"+(n?"":" ubrukt")},
+    h("div",{class:"rad-topp"},
+      h("span",{class:"slug"},d.slug),
+      d.valgbar===false?h("span",{class:"badge"},"Vises, kan ikke velges"):null,
+      h("span",{class:"spacer"}),
+      h("span",{class:"nr"},n===1?"1 hypotese":`${n} hypoteser`)),
+    felt,
+    h("div",{class:"row"},
+      h("label",{class:"hake"},valgbar," Kan velges"),
+      h("span",{class:"spacer"}),
+      h("button",{class:"primary liten",type:"button",onclick:async()=>{
+        try{
+          await rpc("admin_sett_leveranse",{p_slug:d.slug,
+            p_nr:parseInt($(sid+"-nr").value,10),
+            p_label:$(sid+"-label").value.trim(),
+            p_hint:$(sid+"-hint").value.trim(),
+            p_valgbar:valgbar.checked});
+          toast("Leveransen er lagret"); await refresh();
+        }catch(e){ handleErr(e); }
+      }},"Lagre"),
+      /* Databasen nekter sletting når leveransen er i bruk, og sier hvor mange
+         som må flyttes. Knappen skjules likevel: å tilby en handling som alltid
+         feiler er verre enn å ikke tilby den. */
+      n?null:h("button",{class:"linkbtn danger",type:"button",onclick:async()=>{
+        if(!confirm(`Slette leveransen «${d.label}»?\n\nIngen hypoteser er koblet til den, så ingenting går tapt.`)) return;
+        try{ await rpc("admin_slett_leveranse",{p_slug:d.slug}); toast("Leveransen er slettet"); await refresh(); }
+        catch(e){ handleErr(e); }
+      }},"Slett")));
+}
+function renderLev(){
+  const liste=leveranser().slice().sort((a,b)=>a.nr-b.nr||a.label.localeCompare(b.label,"nb"));
+  $("lev-c").textContent = liste.length ? `${liste.length} stk` : "";
+  $("lev-liste").replaceChildren(...(liste.length?liste.map(levRad):[h("p",{class:"ingen"},"Ingen leveranser ennå.")]));
+}
+$("lev-ny").addEventListener("submit",async e=>{
+  e.preventDefault();
+  try{
+    await rpc("admin_sett_leveranse",{
+      p_slug:$("n-slug").value.trim().toLowerCase(),
+      p_nr:parseInt($("n-nr").value,10),
+      p_label:$("n-label").value.trim(),
+      p_hint:$("n-hint").value.trim(),
+      p_valgbar:$("n-valgbar").checked});
+    $("n-slug").value=""; $("n-nr").value=""; $("n-label").value=""; $("n-hint").value="";
+    toast("Leveransen er lagt til"); await refresh();
+  }catch(err){ handleErr(err); }
+});
+
+/* ---------- hypoteser ---------- */
+/* Ikke-valgbare leveranser er med i nedtrekket når hypotesen allerede står på
+   en av dem. Uten det ville første lagring stilltiende flyttet hypotesen til
+   noe annet, fordi verdien ikke fantes blant valgene. */
+function levSelect(id, valgt){
+  const v=valgt||"";
+  const liste=leveranser().slice().sort((a,b)=>a.nr-b.nr)
+    .filter(d=>d.valgbar!==false||d.slug===v);
+  const ukjent = v && !liste.some(d=>d.slug===v);
+  return h("select",{id},
+    h("option",{value:"",selected:!v},"— ingen —"),
+    liste.map(d=>h("option",{value:d.slug,selected:d.slug===v},`${d.nr}. ${d.label}`)),
+    ukjent?h("option",{value:v,selected:true},`${v} (ukjent)`):null);
+}
+function hypRad(x){
+  const p=`h-${x.id}`;
+  const prim=levSelect(p+"-lev", x.leveranse);
+  const sek =levSelect(p+"-lev2", x.leveranse_2);
+  return h("div",{class:"rad"},
+    h("div",{class:"rad-topp"},
+      h("span",{class:"nr"},nr(x.nr)),
+      x.leveranse?null:h("span",{class:"badge w",title:"Hypotesen faller ut av enhver leveranserapport."},"Mangler leveranse"),
+      h("span",{class:"spacer"}),
+      h("span",{class:"slug"},x.leveranse||"")),
+    h("p",{class:"tekst"},x.tekst||""),
+    h("div",{class:"lev-valg"},
+      h("div",{class:"field"},h("label",{for:p+"-lev"},"Leveranse"),prim),
+      h("div",{class:"field"},h("label",{for:p+"-lev2"},"Sekundær"),sek),
+      h("button",{class:"primary liten",type:"button",onclick:async()=>{
+        try{
+          await rpc("admin_sett_hypothesis_leveranse",
+            {p_id:x.id, p_leveranse:prim.value||null, p_leveranse_2:sek.value||null});
+          toast(`${nr(x.nr)} er flyttet`); await refresh();
+        }catch(e){ handleErr(e); }
+      }},"Lagre"),
+      h("button",{class:"linkbtn danger",type:"button",onclick:async()=>{
+        if(!confirm(`Arkivere ${nr(x.nr)}?\n\n${x.tekst||""}\n\nDen forsvinner fra registeret for alle. `
+                  + "Vurderingene blir stående, og hypotesen kan hentes tilbake fra arkivet.")) return;
+        try{ await rpc("admin_arkiver_hypothesis",{p_id:x.id}); toast(`${nr(x.nr)} er arkivert`); await refresh(); }
+        catch(e){ handleErr(e); }
+      }},"Arkiver")));
+}
+function renderHyp(){
+  let liste=hypoteser().slice().sort((a,b)=>a.nr-b.nr);
+  if(query){
+    const q=query.toLowerCase();
+    liste=liste.filter(x=>[nr(x.nr),x.tekst,x.kriterium,x.eier,levNavn(x.leveranse),levNavn(x.leveranse_2)]
+      .join(" ").toLowerCase().includes(q));
+  }
+  const alle=hypoteser().length;
+  $("hyp-c").textContent = query ? `${liste.length} av ${alle}` : (alle?`${alle} stk`:"");
+  $("hyp-liste").replaceChildren(...(liste.length?liste.map(hypRad)
+    :[h("p",{class:"ingen"},alle?"Ingen treff i søket.":"Ingen hypoteser ennå.")]));
+}
+let qT;
+$("q").addEventListener("input",e=>{ clearTimeout(qT); qT=setTimeout(()=>{ query=e.target.value.trim(); renderHyp(); },150); });
+$("hyp-ny").addEventListener("submit",async e=>{
+  e.preventDefault();
+  const tekst=$("h-tekst").value.trim();
+  if(!tekst){ $("h-tekst").focus(); return; }
+  $("h-add").disabled=true;
+  try{
+    const r=await rpc("admin_add_hypothesis",{
+      p_tekst:tekst, p_kriterium:$("h-krit").value.trim(),
+      p_leveranse:$("h-lev").value||null, p_leveranse_2:$("h-lev2").value||null,
+      p_kilde:$("h-kilde").value.trim(), p_eier:$("h-eier").value.trim(),
+      p_frist:$("h-frist").value||null});
+    $("h-tekst").value=""; $("h-krit").value=""; $("h-kilde").value=""; $("h-frist").value="";
+    toast(`${nr(r&&r.nr)} er lagt til`); await refresh();
+  }catch(err){ handleErr(err); }
+  $("h-add").disabled=false;
+});
+
+/* ---------- arkiv ---------- */
+function renderArkiv(){
+  $("ark-c").textContent = arkiv.length ? `${arkiv.length} stk` : "";
+  $("ark-liste").replaceChildren(...(arkiv.length ? arkiv.map(x=>h("div",{class:"rad"},
+    h("div",{class:"rad-topp"},
+      h("span",{class:"nr"},nr(x.nr)),
+      h("span",{class:"slug"},levNavn(x.leveranse)),
+      h("span",{class:"spacer"}),
+      x.arkivert?h("span",{class:"slug"},"arkivert "+x.arkivert.split("-").reverse().join(".")):null),
+    h("p",{class:"tekst"},x.tekst||""),
+    h("div",{class:"row"},h("span",{class:"spacer"}),
+      h("button",{class:"primary liten",type:"button",onclick:async()=>{
+        try{ await rpc("admin_gjenopprett_hypothesis",{p_id:x.id}); toast(`${nr(x.nr)} er tilbake i registeret`); await refresh(); }
+        catch(e){ handleErr(e); }
+      }},"Gjenopprett"))))
+  : [h("p",{class:"ingen"},"Ingenting er arkivert.")]));
+}
+
+const VISNING = {
+  lukket:       ["Lukket", "Bare antall. Ingen tall, ingen punkter i matrisen."],
+  etter_stemme: ["Etter egen stemme", "Gruppens tall åpnes per hypotese, så snart deltakeren selv har vurdert den."],
+  apent:        ["Åpent", "Alle ser alt. Bruk denne til plenumsdiskusjonen."]
+};
+function renderVisning(){
+  const naa=(board&&board.resultatvisning)||"etter_stemme";
+  $("vis-valg").replaceChildren(...Object.entries(VISNING).map(([k,[navn,hjelp]])=>
+    h("label",{class:"valg"+(naa===k?" valgt":"")},
+      h("input",{type:"radio",name:"visning",value:k,checked:naa===k,
+        onchange:async()=>{
+          try{ await rpc("admin_sett_resultatvisning",{p_modus:k});
+               toast("Resultatvisning: "+navn.toLowerCase()); await refresh(); }
+          catch(e){ handleErr(e); }
+        }}),
+      h("span",{}, h("strong",{},navn), h("span",{class:"hjelp"},hjelp)))));
+}
+
+function render(){
+  renderVisning(); renderLev(); renderHyp(); renderArkiv();
+  /* Nedtrekkene i «Ny hypotese» bygges av leveranselista og blir utdaterte i det
+     en leveranse legges til eller døpes om. Valget beholdes, slik at en halvt
+     utfylt hypotese ikke mister leveransen fordi noe annet ble lagret. */
+  const b=$("h-lev"), b2=$("h-lev2");
+  $("h-lev-wrap").replaceChildren(levSelect("h-lev", b?b.value:""));
+  $("h-lev2-wrap").replaceChildren(levSelect("h-lev2", b2?b2.value:""));
+}
+
+/* ---------- innlogging ---------- */
+/* Hele dette avsnittet er hentet uendret fra index.html. Samme sesjonsnøkkel
+   betyr at den som allerede er logget inn på hovedsiden kommer rett inn her. */
+const VKEY = "nordlys-hyp-venter";
+const EKEY = "nordlys-hyp-epost";
+let venterPaaKode=null;
+
+const gyldigEpost = e => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e);
+function huskEpost(e){
+  try{ gyldigEpost(e) ? localStorage.setItem(EKEY,e) : localStorage.removeItem(EKEY); }catch(_){}
+}
+const husketEpost = () => { try{ return localStorage.getItem(EKEY)||""; }catch(_){ return ""; } };
+function settVenter(epost){
+  venterPaaKode=epost||null;
+  try{ epost ? localStorage.setItem(VKEY,epost) : localStorage.removeItem(VKEY); }catch(e){}
+}
+
+function loginFeil(m){ $("l-err").textContent=m; $("l-err").hidden=false; }
+function visKodesteg(epost, sendt){
+  settVenter(epost);
+  $("steg-epost").hidden=true; $("steg-kode").hidden=false;
+  $("l-go").textContent="Logg inn";
+  $("l-harkode").hidden=true; $("l-bytt").hidden=false; $("l-nykode").hidden=false;
+  $("l-sendt").textContent = sendt
+    ? `Sendt til ${epost}. Koden gjelder i 12 timer, men kan bare brukes én gang.`
+    : `Skriv inn koden som ble sendt til ${epost}. Den gjelder i 12 timer og kan brukes én gang.`;
+  $("l-kode").value=""; $("l-kode").focus();
+}
+function visEpoststeg(){
+  settVenter(null);
+  $("steg-epost").hidden=false; $("steg-kode").hidden=true;
+  $("l-go").textContent="Send meg kode"; $("l-bytt").hidden=true; $("l-nykode").hidden=true;
+  $("l-err").hidden=true;
+  $("l-harkode").hidden = !$("l-epost").value.trim();
+}
+$("l-bytt").addEventListener("click",visEpoststeg);
+
+let nyKodeTimer=null;
+function sperrNyKode(sek){
+  clearInterval(nyKodeTimer);
+  const b=$("l-nykode"); let igjen=sek;
+  const tick=()=>{
+    if(igjen<=0){ clearInterval(nyKodeTimer); nyKodeTimer=null;
+      b.disabled=false; b.textContent="Send meg en ny kode"; return; }
+    b.disabled=true; b.textContent=`Send meg en ny kode (${igjen} s)`; igjen--;
+  };
+  tick(); nyKodeTimer=setInterval(tick,1000);
+}
+$("l-nykode").addEventListener("click",async()=>{
+  if(!venterPaaKode) return;
+  $("l-err").hidden=true; $("l-nykode").disabled=true;
+  try{
+    await gotrue("otp", {email:venterPaaKode, create_user:false});
+    $("l-sendt").textContent=`Ny kode sendt til ${venterPaaKode}. Den forrige virker ikke lenger.`;
+    $("l-kode").value=""; $("l-kode").focus();
+    sperrNyKode(60);
+  }catch(err){
+    if(err.status===429){
+      const m=/(\d+)\s*second/i.exec(err.message||"");
+      sperrNyKode(m?parseInt(m[1],10):60);
+      loginFeil("Du må vente litt før du kan be om en ny kode. Se etter den forrige i mellomtiden — også i søppelposten.");
+    }else{
+      $("l-nykode").disabled=false;
+      loginFeil("Fikk ikke sendt ny kode. Prøv igjen.");
+    }
+  }
+});
+$("l-harkode").addEventListener("click",()=>{
+  const epost=$("l-epost").value.trim().toLowerCase();
+  if(!epost){ $("l-epost").focus(); return; }
+  huskEpost(epost);
+  visKodesteg(epost,false);
+});
+$("l-epost").addEventListener("input",()=>{ $("l-harkode").hidden = !$("l-epost").value.trim(); });
+
+$("login").addEventListener("submit",async e=>{
+  e.preventDefault();
+  $("l-go").disabled=true; $("l-err").hidden=true;
+  try{
+    if(!venterPaaKode){
+      const epost=$("l-epost").value.trim().toLowerCase();
+      if(!epost) return;
+      huskEpost(epost);
+      try{
+        await gotrue("otp", {email:epost, create_user:false});
+      }catch(err){
+        if(err.status===422||err.status===400)
+          loginFeil("Adressen står ikke på deltakerlista. Sjekk skrivemåten, eller si fra så legges du til.");
+        else if(err.status===429)
+          loginFeil("Du har bedt om kode nylig. Vent et minutt — eller bruk koden du allerede har fått.");
+        else loginFeil("Fikk ikke kontakt med serveren. Prøv igjen.");
+        return;
+      }
+      visKodesteg(epost,true);
+      sperrNyKode(60);
+      return;
+    }
+
+    const kode=$("l-kode").value.replace(/\s/g,"");
+    if(!kode) return;
+    let d;
+    try{
+      d=await gotrue("verify", {email:venterPaaKode, token:kode, type:"email"});
+    }catch(err){
+      if(err.status===429) loginFeil("For mange forsøk. Vent litt og prøv igjen.");
+      else loginFeil("Koden stemmer ikke, eller den er utløpt. Be om en ny.");
+      return;
+    }
+
+    const ny={epost:venterPaaKode, access_token:d.access_token, refresh_token:d.refresh_token,
+              utloper:Date.now()+(d.expires_in||3600)*1000};
+    try{
+      session=ny;
+      const p=await rpc("min_profil");
+      session={...session, pid:p.participant_id, name:p.navn, workshop:p.workshop};
+      store(false,session); settVenter(null); huskEpost(ny.epost); enter();
+    }catch(err){
+      session=null; store(false,null);
+      if(err.code==="42501")
+        loginFeil("Du er logget inn, men adressen står ikke på deltakerlista. Si fra, så legges du til.");
+      else
+        loginFeil("Koden var riktig, men tavla svarte ikke. Prøv å logge inn på nytt.");
+      visKodesteg(ny.epost,false);
+    }
+  }finally{
+    $("l-go").disabled=false;
+  }
+});
+
+/* Dette er kosmetikk, ikke sikkerhet. admin.html ligger åpent på GitHub Pages,
+   og hvem som helst kan lese kilden og kalle de samme RPC-ene. Det som faktisk
+   stenger døra er private.meg_admin() i databasen, som kaster 42501 for alle
+   andre. Skjuler du noe her, har du ikke beskyttet noe. */
+function visNektet(){
+  $("view-login").hidden=true; $("app").hidden=true; $("nav").hidden=false;
+  $("view-nektet").hidden=false;
+}
+function enter(){
+  $("me-name").textContent=session.name||session.epost;
+  $("view-login").hidden=true; $("view-nektet").hidden=true;
+  $("app").hidden=false; $("nav").hidden=false;
+  refresh();
+}
+function logout(){
+  if(session&&session.access_token) fetch(`${CFG.supabaseUrl}/auth/v1/logout`,{method:"POST",
+    headers:{apikey:CFG.supabaseKey,Authorization:"Bearer "+session.access_token}}).catch(()=>{});
+  store(false,null); session=null; board=null; arkiv=[];
+  $("banner").hidden=true;
+  $("l-epost").value = husketEpost() || $("l-epost").value;
+  visEpoststeg();
+  $("view-login").hidden=false; $("view-nektet").hidden=true;
+  $("app").hidden=true; $("nav").hidden=true;
+}
+$("logout").addEventListener("click",()=>{
+  /* Samme sesjon som hovedsiden. Logger du ut her, er du ute der også — og veien
+     tilbake går via en ny kode på e-post. */
+  if(!confirm("Logge ut?\n\nDu logges også ut av hypoteseregisteret, og trenger en ny kode på e-post for å komme inn igjen.")) return;
+  logout();
+});
+/* Ingen polling her. Backend redigeres av én person av gangen, og et felt som
+   byttes ut under fingrene mens man skriver i det er verre enn ferske tall. */
+$("oppfrisk").addEventListener("click",refresh);
+
+$("h-lev-wrap").replaceChildren(levSelect("h-lev",""));
+$("h-lev2-wrap").replaceChildren(levSelect("h-lev2",""));
+
+/* ---------- oppstart ---------- */
+session=store(true);
+if(session&&session.access_token&&session.refresh_token) enter();
+else {
+  session=null; store(false,null);
+  $("view-login").hidden=false; $("app").hidden=true;
+  let ventet=null; try{ ventet=localStorage.getItem(VKEY); }catch(e){}
+  if(ventet){ $("l-epost").value=ventet; visKodesteg(ventet,false); }
+  else {
+    $("l-epost").value = husketEpost();
+    visEpoststeg();
+    ($("l-epost").value ? $("l-go") : $("l-epost")).focus();
+  }
+}
+})();
+</script>
+</body>
+</html>

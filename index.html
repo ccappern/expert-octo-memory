@@ -13,7 +13,16 @@
 :root{
   --bg:#eef3f6; --surface:#ffffff; --sunk:#e3eaef; --ink:#13202a; --muted:#566775; --line:#d3dde4;
   --accent:#0d7565; --accent-ink:#ffffff; --accent-soft:#d5ede7;
-  --t-verdi:#0d7565; --t-gjennom:#2f64a8; --t-levedykt:#6a4bb0; --t-aksept:#a45a12; --t-tilp:#a8326f;
+  /* Åtte leveranser, men bare fem hues — flere enn det lar seg ikke skille som
+     små prikker i matrisen. Derfor deler de nært beslektede leveransene hue og
+     skilles på lyshet. Familiene er ikke tilfeldige: de følger den gamle
+     typeinndelingen (verdi/gjennomførbarhet/levedyktighet/aksept), slik at den
+     dimensjonen fortsatt kan leses av selv om typene er borte som kategori. */
+  --l-malbilde:#0d7565;  --l-brukerbehov:#15a088;
+  --l-teknisk:#2f64a8;
+  --l-styring:#6a4bb0;   --l-forankring:#8f74d4;
+  --l-juridisk:#a45a12;  --l-forpliktelse:#c77c2e;
+  --l-beslutning:#a8326f;
   --ok:#2c7a34; --bad:#b0281f; --warnbg:#fbeedd; --warn:#8a4a0c;
   --f-display:"Familjen Grotesk","Helvetica Neue",Arial,sans-serif;
   --f-body:system-ui,-apple-system,"Segoe UI","Helvetica Neue",Arial,sans-serif;
@@ -23,7 +32,11 @@
 @media (prefers-color-scheme: dark){:root{
   --bg:#0c141a; --surface:#142029; --sunk:#0f1a22; --ink:#e3ecf1; --muted:#93a5b2; --line:#253541;
   --accent:#4cc9ad; --accent-ink:#06231d; --accent-soft:#143a32;
-  --t-verdi:#4cc9ad; --t-gjennom:#77a8ee; --t-levedykt:#ad94f2; --t-aksept:#e3a35c; --t-tilp:#ef8fbd;
+  --l-malbilde:#4cc9ad;  --l-brukerbehov:#8fe6d2;
+  --l-teknisk:#77a8ee;
+  --l-styring:#ad94f2;   --l-forankring:#cbbbf8;
+  --l-juridisk:#e3a35c;  --l-forpliktelse:#f1c593;
+  --l-beslutning:#ef8fbd;
   --ok:#7ccf84; --bad:#f08a80; --warnbg:#3a2a16; --warn:#f0bf86; color-scheme:dark}}
 
 *{box-sizing:border-box}
@@ -48,7 +61,7 @@ h1{font-size:19px;font-weight:700;margin:0;letter-spacing:-.01em;white-space:now
    bare som noe man kan rette hvis det er feil. */
 button.me{border:0;background:none;cursor:pointer;padding:0;font:inherit;font-size:13px}
 button.me:hover{color:var(--ink);text-decoration:underline}
-button.ghost{background:none;border:1px solid transparent;border-radius:8px;padding:6px 10px;cursor:pointer;color:var(--muted);font-size:13px}
+button.ghost,a.ghost{background:none;border:1px solid transparent;border-radius:8px;padding:6px 10px;cursor:pointer;color:var(--muted);font-size:13px;text-decoration:none;display:inline-block}
 button.ghost:hover{background:var(--sunk);color:var(--ink)}
 button.primary{background:var(--accent);color:var(--accent-ink);border:0;border-radius:8px;padding:8px 14px;cursor:pointer;font-weight:600}
 button.primary:hover{filter:brightness(1.07)}
@@ -95,16 +108,6 @@ button.primary:disabled{opacity:.5;cursor:default}
 select.sort{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:7px 10px;font-size:13px}
 
 /* ---------- skjema ---------- */
-.compose{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:grid;gap:12px;margin-bottom:16px}
-.compose h2{font-size:17px;margin:0}
-/* Kladd er din egen arbeidsbenk: stiplet ramme skiller den fra det de andre
-   ser, uten å rope. Bakgrunnen er den samme flaten som de andre kortene —
-   gjennomsiktig ville latt sidebakgrunnen skinne gjennom, og da leses kortet
-   som et hull i lista i stedet for som et kort. */
-.kladd-topp{margin:4px 0 10px}
-.kladd-topp h3{font-size:15px;margin:0 0 2px}
-.card.erkladd{border-style:dashed;border-left-style:solid}
-.card.erkladd .nr.kladd{background:var(--sunk);color:var(--muted);letter-spacing:.02em}
 .liten{padding:4px 10px;font-size:13px}
 .field{display:grid;gap:4px;min-width:0}
 .field label{font-size:13px;font-weight:600}
@@ -112,17 +115,6 @@ select.sort{border:1px solid var(--line);background:var(--surface);border-radius
 .field input,.field select,.field textarea{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:9px 11px;width:100%}
 .field textarea{resize:vertical;min-height:44px}
 .opt{font-weight:400;color:var(--muted)}
-.typer{border:0;padding:0;margin:0;min-width:0}
-.typer legend{font-size:13px;font-weight:600;padding:0 0 6px}
-.typegrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:7px}
-.typevalg{display:flex;gap:9px;align-items:flex-start;border:1px solid var(--line);border-radius:9px;
-  padding:8px 10px;cursor:pointer;background:var(--bg);min-width:0}
-.typevalg:hover{border-color:var(--muted)}
-.typevalg input{margin:3px 0 0;flex:none;accent-color:var(--accent);width:auto}
-.typevalg.valgt{border-color:var(--accent);background:var(--accent-soft)}
-.typevalg .tn{display:flex;align-items:center;gap:6px;font-size:13.5px;font-weight:600}
-.typevalg .tn .dot{width:9px;height:9px;border-radius:50%;flex:none}
-.typevalg .th{display:block;font-size:12px;color:var(--muted);line-height:1.35;margin-top:2px}
 .row{display:flex;flex-wrap:wrap;gap:10px;align-items:end}
 .row .field{flex:1 1 180px}
 .help{font-size:13px;color:var(--muted);margin:0}
@@ -142,6 +134,11 @@ select.sort{border:1px solid var(--line);background:var(--surface);border-radius
 .card-head{display:flex;align-items:center;gap:9px;flex-wrap:wrap;font-size:12.5px}
 .nr{font-family:var(--f-mono);font-weight:600;color:var(--muted)}
 .type{font-weight:600}
+/* Sekundær leveranse: samme plass i hierarkiet som et merke, men uten farge.
+   Fargen er reservert for den leveransen hypotesen faktisk avgjør. */
+.type2{font-size:12px;color:var(--muted);font-weight:600}
+/* Skjult snitt skal lese som en tilstand, ikke som et tall som mangler. */
+.avg.skjult{color:var(--muted);font-style:italic}
 .spacer{flex:1}
 .badge{font-size:11px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;padding:2px 8px;border-radius:999px;
   background:var(--sunk);color:var(--muted)}
@@ -321,6 +318,7 @@ body.scene header.top{min-height:52px}
   <div class="top-actions" id="nav" hidden>
     <span class="live" id="live"><span class="dot"></span><span id="live-t"></span></span>
     <button class="me" id="me-name" type="button" title="Klikk for å rette navnet ditt"></button>
+    <a class="ghost" id="til-backend" href="admin.html" hidden>Backend</a>
     <button class="ghost" id="scene">Storskjerm</button>
     <button class="ghost" id="exp-md">Eksporter .md</button>
     <button class="ghost" id="exp-csv">.csv</button>
@@ -367,7 +365,6 @@ body.scene header.top{min-height:52px}
     <div class="cols">
       <div class="col-main">
         <div class="toolbar">
-          <button class="primary" id="compose-toggle" type="button" aria-expanded="false">+ Ny hypotese</button>
           <input class="search" id="q" type="search" placeholder="Søk i hypoteser, kriterier, eiere …" aria-label="Søk">
           <select class="sort" id="sort" aria-label="Sortering">
             <option value="nr">Nummer</option>
@@ -377,37 +374,6 @@ body.scene header.top{min-height:52px}
           </select>
           <div class="chips" id="filters"></div>
         </div>
-
-        <form class="compose" id="compose" autocomplete="off" hidden>
-          <h2>Ny hypotese</h2>
-          <div class="field">
-            <label for="f-tekst"><span class="pre">Vi tror at …</span></label>
-            <textarea id="f-tekst" rows="2" placeholder="nettselskapene vil dele hendelser med hverandre når KraftCERT er tillitsanker" required maxlength="1000"></textarea>
-          </div>
-          <div class="field">
-            <label for="f-krit"><span class="pre">Vi vet det når …</span></label>
-            <textarea id="f-krit" rows="2" placeholder="minst tre selskaper har sagt ja til å delta i en pilot" maxlength="1000"></textarea>
-          </div>
-          <div id="f-type-wrap"></div>
-          <div class="row">
-            <div class="field">
-              <label for="f-eier">Eier</label>
-              <span id="f-eier-wrap"></span>
-            </div>
-            <div class="field">
-              <label for="f-kilde">Kilde <span class="opt">valgfritt</span></label>
-              <input id="f-kilde" maxlength="300" placeholder="docs/forprosjekt/… eller referat #3">
-            </div>
-            <button class="primary" id="f-add" type="submit">Legg til</button>
-            <button class="linkbtn" id="f-kladd" type="button">Lagre som kladd</button>
-          </div>
-          <p class="help">Frist settes når hypotesen er prioritert. En kladd ser bare du, til du publiserer den. <button type="button" class="linkbtn" id="bulk-toggle">Lim inn flere på én gang</button></p>
-          <div id="bulk" hidden class="field">
-            <label for="f-bulk">Én hypotese per linje. Skill kriteriet med | om dere har det.</label>
-            <textarea id="f-bulk" rows="5" placeholder="KraftCERT vil drifte tillitsankeret | KraftCERT bekrefter rolle og ressurser skriftlig&#10;Ett selskap kan pilotere uten anskaffelse"></textarea>
-            <div class="row"><button class="primary" type="button" id="bulk-add">Legg til alle med valgt type</button></div>
-          </div>
-        </form>
 
         <div id="list"></div>
       </div>
@@ -440,16 +406,20 @@ body.scene header.top{min-height:52px}
 (function(){
 const CFG = window.NORDLYS_CONFIG;
 
-/* Typene er et filter, ikke en taksonomi. Eneste jobb de har er å avsløre at en
-   hel kategori mangler. Derfor må de kunne skilles uten skjønn: «drift» lå
-   tidligere i både gjennom og levedykt, og aksept ble brukt både om det eksterne
-   vi ikke rår over og om vårt eget sikkerhetsarbeid. */
-const TYPES = {
-  verdi:    {label:"Verdi", hint:"Vil selskapene faktisk dele og bruke det?"},
-  gjennom:  {label:"Gjennomførbarhet", hint:"Kan vi bygge det og få det til å virke teknisk?"},
-  levedykt: {label:"Levedyktighet", hint:"Hvem eier, drifter og finansierer v1 over tid?"},
-  aksept:   {label:"Aksept", hint:"Må noen utenfor prosjektet godta det? Regelverk, tilsyn, juss."}
-};
+/* Leveransene erstatter typene som grupperingen. De kommer fra databasen og
+   ikke fra en konstant her, i motsetning til EIERE: kilden på Confluence har
+   ødelagt nummerering og uavklart overlapp mellom to av leveransene, så lista
+   rettes i backend flere ganger før den står stille. Fargen er derimot ren
+   lesbarhet og hører hjemme i CSS-en. */
+let LEVERANSER = {};
+const lev      = s => LEVERANSER[s] || null;
+const levLabel = s => lev(s)?.label || "Uten leveranse";
+const levKort  = s => lev(s) ? "L"+lev(s).nr : "–";
+const lcolor   = s => lev(s) ? `var(--l-${s})` : "var(--muted)";
+/* Sortering på nummer, med slug som siste utslag slik at rekkefølgen ikke
+   hopper mens to leveranser midlertidig deler nummer under en ombytting. */
+const levSortert = () => Object.values(LEVERANSER).sort((a,b)=>a.nr-b.nr||a.slug.localeCompare(b.slug,"no"));
+
 const STATUS = {ny:"Ny", testes:"Testes", bekreftet:"Bekreftet", avkreftet:"Avkreftet"};
 
 /* Eier er den som er ansvarlig for å drive hypotesen i mål internt — ikke den
@@ -496,16 +466,22 @@ const VET_IKKE = 0;
 const erTall    = v => typeof v === "number" && v >= 1;
 const erVetIkke = v => v === VET_IKKE;
 const harSvart  = v => erTall(v) || erVetIkke(v);
-const tcolor = t => `var(--t-${TYPES[t]?t:"verdi"})`;
 const SKEY = "nordlys-hyp-session";
 
 let session=null;            // {code,pid,token,name,workshop}
 let hyps=[], rates={}, myRates={}, pendingRate=new Set();
-/* Egne kladder holdes utenfor `hyps`. Alt annet i appen — snitt, filtre,
-   matrise, tellinger — regner på det publiserte, og en halvtenkt hypotese
-   skal ikke påvirke noen av delene. */
-let kladder=[];
-let filter="alle", sort="nr", query="", selected=null, editing=null, confirmDel=null;
+/* Settes fra get_board. Styrer bare om lenken til backend vises — selve
+   tilgangen avgjøres av databasen, som avviser alle admin-kall fra andre. */
+let erAdmin=false;
+/* Hvilke resultater deltakeren får se. Settes av backend, men håndheves i
+   databasen: klienten tegner bare det den faktisk har fått rader for. Verdien
+   brukes til å forklare HVORFOR noe mangler, ikke til å skjule noe. */
+let visning="etter_stemme";
+/* Antall vurderinger per hypotese, beregnet i databasen og sendt uavhengig av
+   modus. «3 har vurdert» anker ingen retning, men sier om hypotesen er moden
+   for diskusjon. */
+let tellinger={};
+let filter="alle", sort="nr", query="", selected=null, editing=null;
 /* Satt mens noen er i ferd med å sette avklart status og skal skrive belegget.
    {id, status} — statusen er ikke lagret ennå. */
 let statusEdit=null;
@@ -642,6 +618,16 @@ function handleErr(e){
    derfor den hører hjemme i «Grunnlag» som et premiss anbefalingen hviler på. */
 const erAvklart = x => !!x && (x.status==="bekreftet" || x.status==="avkreftet");
 function allRates(){ const out={...rates}; if(session) out[session.pid]=myRates; return out; }
+/* Om gruppens TALL skal vises for denne hypotesen. Antallet vises alltid.
+   Databasen holder uansett radene tilbake — dette avgjør bare om vi skriver
+   «Snitt …» eller forklarer hvorfor det står tomt. */
+function visTall(x){
+  if(visning==="apent") return true;
+  if(visning==="lukket") return false;
+  return ferdigVurdert(x);
+}
+const antallVurdert = id => (tellinger[id]||{}).n ?? statsFor(id).n;
+
 function statsFor(id){
   const ks=[], us=[];
   /* «Vet ikke» teller ikke i snittet, men det telles. At halve rommet ikke kan
@@ -681,26 +667,9 @@ const minVerdi = id => utkast[id] || myRates[id] || null;
    stilles hver for seg. */
 const kanPlasseres = v => !!v && erTall(v.k) && erTall(v.u);
 
-/* Radioknapper framfor nedtrekk: forklaringen til hver type må være synlig i det
-   øyeblikket valget tas, ikke gjemt bak et klikk. */
-function typeValg(navn, valgt){
-  const grid=h("div",{class:"typegrid"}, Object.entries(TYPES).map(([k,t])=>{
-    const id=`${navn}-${k}`;
-    return h("label",{class:"typevalg"+(valgt===k?" valgt":""),for:id},
-      h("input",{type:"radio",name:navn,id,value:k,checked:valgt===k}),
-      h("span",{},
-        h("span",{class:"tn"},h("span",{class:"dot",style:`background:${tcolor(k)}`}),t.label),
-        h("span",{class:"th"},t.hint)));
-  }));
-  /* :has() dekker de fleste nettlesere, men markeringen er for viktig til å
-     overlates til det alene. */
-  grid.addEventListener("change",()=>{
-    for(const l of grid.querySelectorAll(".typevalg"))
-      l.classList.toggle("valgt", l.querySelector("input").checked);
-  });
-  return h("fieldset",{class:"typer"}, h("legend",{},"Type"), grid);
-}
-const valgtType = navn => (document.querySelector(`input[name="${navn}"]:checked`)||{}).value || "verdi";
+/* Leveransen velges ikke her. Den er strukturen rapporten til styringsgruppen
+   hviler på, og flyttes bare fra backend — ellers ville registeret kunne
+   omorganisere seg selv midt i en workshop. */
 
 function eierValg(id, valgt){
   const v=valgt||"";
@@ -738,18 +707,27 @@ function renderSummary(){
 /* ---------- filtre ---------- */
 function renderFilters(){
   const counts={alle:hyps.length};
-  for(const t in TYPES) counts[t]=hyps.filter(x=>x.type===t).length;
+  /* Sekundær leveranse teller med i filteret. En hypotese som underbygger to
+     leveranser er relevant når begge gjennomgås, og skal ikke forsvinne fra
+     den ene fordi den ble ført primært på den andre. */
+  const paaLev = (x,s) => x.leveranse===s || x.leveranse_2===s;
+  for(const s in LEVERANSER) counts["lev:"+s]=hyps.filter(x=>paaLev(x,s)).length;
+  counts.utenlev=hyps.filter(x=>!x.leveranse).length;
   counts.forst=hyps.filter(x=>statsFor(x.id).first).length;
   counts.uvurdert=hyps.filter(x=>!ferdigVurdert(x)).length;
   counts.uteneier=hyps.filter(x=>statsFor(x.id).first&&!x.eier).length;
   counts.uenige=hyps.filter(x=>statsFor(x.id).split).length;
   counts.ingenvet=hyps.filter(x=>statsFor(x.id).ingenVet).length;
-  const mk=(key,label,color)=>h("button",{class:"chip","aria-pressed":String(filter===key),type:"button",
-    onclick:()=>{filter=key;render();}},
+  const mk=(key,label,color,tittel)=>h("button",{class:"chip","aria-pressed":String(filter===key),type:"button",
+    title:tittel||null, onclick:()=>{filter=key;render();}},
     color?h("span",{class:"dot",style:`background:${color}`}):null, label, h("span",{class:"c"},counts[key]));
   $("filters").replaceChildren(...[
     mk("alle","Alle"),
-    ...Object.keys(TYPES).map(t=>mk(t,TYPES[t].label,tcolor(t))),
+    ...levSortert().map(d=>mk("lev:"+d.slug, "L"+d.nr+" "+d.label, lcolor(d.slug), d.hint)),
+    /* En leveranse med null hypoteser er det viktigste filteret kan si: hele
+       kategorien mangler evidens. Derfor skjules den ikke når den er tom. */
+    counts.utenlev?mk("utenlev","Uten leveranse",null,
+      "Disse havner ikke i noen leveranserapport. Sett leveranse i backend."):null,
     mk("forst","Må avklares"), mk("uvurdert","Ikke vurdert av deg"),
     mk("uenige","Uenige"),
     /* Vises bare når den har treff. Filterraden er allerede lang, og et filter
@@ -765,10 +743,15 @@ function visible(){
   else if(filter==="uteneier") list=list.filter(x=>statsFor(x.id).first&&!x.eier);
   else if(filter==="uenige") list=list.filter(x=>statsFor(x.id).split);
   else if(filter==="ingenvet") list=list.filter(x=>statsFor(x.id).ingenVet);
-  else if(filter!=="alle") list=list.filter(x=>x.type===filter);
+  else if(filter==="utenlev") list=list.filter(x=>!x.leveranse);
+  else if(filter.startsWith("lev:")){
+    const s=filter.slice(4);
+    list=list.filter(x=>x.leveranse===s||x.leveranse_2===s);
+  }
   if(query){
     const q=query.toLowerCase();
-    list=list.filter(x=>[x.tekst,x.kriterium,x.kilde,x.eier,nr(x.nr),TYPES[x.type]?.label].join(" ").toLowerCase().includes(q));
+    list=list.filter(x=>[x.tekst,x.kriterium,x.kilde,x.eier,nr(x.nr),
+                         levLabel(x.leveranse),levLabel(x.leveranse_2)].join(" ").toLowerCase().includes(q));
   }
   const score=x=>{const s=statsFor(x.id);return (s.k||0)*(s.u||0);};
   if(sort==="prio") list.sort((a,b)=>score(b)-score(a)||a.nr-b.nr);
@@ -798,49 +781,42 @@ function seg(id, dim){
 function emptyState(){
   return h("div",{class:"empty-state"},
     h("h3",{},loaded?(hyps.length?"Ingen hypoteser i dette utvalget.":"Ingen hypoteser ennå"):"Henter hypoteser …"),
-    hyps.length?null:h("p",{class:"help"},"Skriv hver antakelse som «Vi tror at …» og hva som skal til for å vite det. Bruk de fem typene for å dekke hele bildet:"),
-    hyps.length?null:h("div",{class:"types-grid"}, Object.entries(TYPES).map(([k,t])=>h("div",{},
-      h("strong",{},h("span",{class:"dot",style:`background:${tcolor(k)}`}),t.label), t.hint))));
+    hyps.length?null:h("p",{class:"help"},"Registeret fylles fra backend. Hver hypotese kobles til leveransen den skal underbygge:"),
+    hyps.length?null:h("div",{class:"types-grid"}, levSortert().map(d=>h("div",{},
+      h("strong",{},h("span",{class:"dot",style:`background:${lcolor(d.slug)}`}),"L"+d.nr+" "+d.label), d.hint))));
 }
 function renderList(){
   const L=$("list");
   const fk=document.activeElement&&document.activeElement.dataset?document.activeElement.dataset.fk:null;
   const list=hyps.length?visible():[];
-  /* Kladdene står alltid øverst, uavhengig av filter og søk. De er din egen
-     arbeidsbenk, og skal ikke kunne bli borte bak et filter du glemte at du
-     satte. */
-  const kladdblokk = kladder.length ? [
-    h("div",{class:"kladd-topp"},
-      h("h3",{},kladder.length===1?"Din kladd":`Dine ${kladder.length} kladder`),
-      h("p",{class:"help"},"Bare du ser disse. De får nummer og kan vurderes av de andre først når du publiserer.")),
-    ...kladder.map(card)] : [];
-  L.replaceChildren(...kladdblokk, ...(list.length?list.map(card):(kladder.length?[]:[emptyState()])));
+  L.replaceChildren(...(list.length?list.map(card):[emptyState()]));
   /* Lista bygges på nytt hvert poll. Uten dette mister du fokus midt i en
      vurdering hvert fjerde sekund. */
   if(fk){ const back=L.querySelector(`[data-fk="${CSS.escape(fk)}"]`); if(back) back.focus(); }
 }
 function card(x){
   const s=statsFor(x.id);
-  const kladd = x.publisert===false;
-  /* Sletting er eierens egen. Databasen avviser andres uansett, så knappen
-     skjules for å slippe å måtte svare på hvorfor den ikke virker. */
-  const min = x.by_id && session && x.by_id===session.pid;
   const head=h("div",{class:"card-head"},
-    kladd?h("span",{class:"nr kladd"},"Kladd"):h("span",{class:"nr"},nr(x.nr)),
-    h("span",{class:"type",style:`color:${tcolor(x.type)}`},TYPES[x.type]?.label||"Verdi"),
-    kladd?null:s.first?h("span",{class:"badge q"},"Må avklares"):null,
-    kladd?null:s.split?h("span",{class:"badge w",title:"Vurderingene spriker med 3 eller mer. Ta diskusjonen."},"Uenige"):null,
+    h("span",{class:"nr"},nr(x.nr)),
+    /* Primær leveranse bærer fargen. Den sekundære vises dempet etter, fordi
+       den sier noe annet: hypotesen underbygger den, men avgjør den ikke. */
+    h("span",{class:"type",style:`color:${lcolor(x.leveranse)}`},
+      levKort(x.leveranse)+" "+levLabel(x.leveranse)),
+    x.leveranse_2?h("span",{class:"type2",title:"Underbygger også denne leveransen"},
+      "+ "+levKort(x.leveranse_2)):null,
+    s.first?h("span",{class:"badge q"},"Må avklares"):null,
+    s.split?h("span",{class:"badge w",title:"Vurderingene spriker med 3 eller mer. Ta diskusjonen."},"Uenige"):null,
     /* Ingen tallsvar, men noen har sagt «vet ikke»: hypotesen er ikke glemt,
        den er ubesvarlig med kunnskapen i rommet. Det er en annen oppgave enn
        å vurdere, og krever at noen henter inn kunnskap utenfra. */
-    kladd?null:s.ingenVet?h("span",{class:"badge w",title:"Ingen som har svart, hadde grunnlag for å vurdere. Kunnskapen må hentes utenfra."},"Ingen kan svare"):null,
+    s.ingenVet?h("span",{class:"badge w",title:"Ingen som har svart, hadde grunnlag for å vurdere. Kunnskapen må hentes utenfra."},"Ingen kan svare"):null,
     s.first&&!x.eier?h("span",{class:"badge w"},"Mangler eier"):null,
     x.status==="avkreftet"?h("span",{class:"badge w"},"Avkreftet"):null,
     erAvklart(x)&&!x.status_notat?h("span",{class:"badge w",title:"Statusen ble satt før belegg ble påkrevd. Sett den på nytt for å dokumentere hva som avgjorde det."},"Mangler belegg"):null,
     utkast[x.id]?h("span",{class:"badge w"},"Ikke bekreftet"):null,
     h("span",{class:"spacer"}),
-    kladd?null:ferdigVurdert(x)?h("span",{class:"mine"},"Vurdert"):null,
-    kladd?null:h("select",{class:"status","aria-label":"Status","data-fk":`s:${x.id}`,
+    ferdigVurdert(x)?h("span",{class:"mine"},"Vurdert"):null,
+    h("select",{class:"status","aria-label":"Status","data-fk":`s:${x.id}`,
       onchange:e=>{
         const ny=e.target.value;
         if(ny===(x.status||"ny")) return;
@@ -877,7 +853,6 @@ function card(x){
     body=[
       h("div",{class:"field"},h("label",{for:"e-tekst"},h("span",{class:"pre"},"Vi tror at …")),h("textarea",{id:"e-tekst",rows:"2",maxlength:"1000"},x.tekst||"")),
       h("div",{class:"field"},h("label",{for:"e-krit"},h("span",{class:"pre"},"Vi vet det når …")),h("textarea",{id:"e-krit",rows:"2",maxlength:"1000"},x.kriterium||"")),
-      typeValg("e-type", x.type),
       h("div",{class:"row"},
         h("div",{class:"field"},h("label",{for:"e-eier"},"Eier"), eierValg("e-eier", x.eier)),
         h("div",{class:"field"},h("label",{for:"e-frist"},"Frist"),
@@ -887,7 +862,7 @@ function card(x){
       h("div",{class:"actions"},
         h("button",{class:"primary",type:"button",onclick:async()=>{
           const tekst=$("e-tekst").value.trim(); if(!tekst){toast("Hypotesen kan ikke være tom");return;}
-          await save(x.id,{p_tekst:tekst,p_kriterium:$("e-krit").value.trim(),p_type:valgtType("e-type"),
+          await save(x.id,{p_tekst:tekst,p_kriterium:$("e-krit").value.trim(),
             p_kilde:$("e-kilde").value.trim(),p_eier:$("e-eier").value,p_frist:$("e-frist").value||""});
           editing=null; render();
         }},"Lagre"),
@@ -900,7 +875,6 @@ function card(x){
     if(erAvklart(x)) meta.push(h("span",{},STATUS[x.status],
       x.status_endret?" "+visDato(x.status_endret):"", x.status_av?" av "+x.status_av:""));
     if(x.status_notat) meta.push(h("span",{class:"k"},"Belegg: ",x.status_notat));
-    if(x.by)    meta.push(h("span",{},"Lagt inn av ",x.by));
 
     const bump=prevAvg[x.id]!==undefined && prevAvg[x.id]!==avgKey(s);
     body=[
@@ -908,25 +882,28 @@ function card(x){
       x.kriterium?h("p",{class:"crit"},h("span",{class:"pre"},"Vi vet det når "),x.kriterium)
                  :h("p",{class:"crit empty"},"Mangler kriterium for når vi vet det."),
       meta.length?h("div",{class:"meta"},meta):null,
-      kladd?null:h("div",{class:"rate"},
+      h("div",{class:"rate"},
         h("div",{class:"scale",title:"Hvor ille er det for anbefalingen hvis dette er feil? 1 = merkes ikke, 10 = konseptet faller"},
           h("span",{class:"lbl"},"Kritisk"),seg(x.id,"k"),h("span",{class:"ends"},"1 merkes ikke → 10 faller")),
         h("div",{class:"scale",title:"Hvor lite vet vi om dette i dag? 1 = godt dokumentert, 10 = rent gjetning"},
           h("span",{class:"lbl"},"Usikker"),seg(x.id,"u"),h("span",{class:"ends"},"1 dokumentert → 10 gjetning")),
-        h("span",{class:"avg"+(bump?" bump":"")},"Snitt ",h("b",{},fmt(s.k))," / ",h("b",{},fmt(s.u))," · ",s.n," ",s.n===1?"vurdering":"vurderinger"),
+        visTall(x)
+          ? h("span",{class:"avg"+(bump?" bump":"")},"Snitt ",h("b",{},fmt(s.k))," / ",h("b",{},fmt(s.u))," · ",s.n," ",s.n===1?"vurdering":"vurderinger")
+          : h("span",{class:"avg skjult",title:visning==="lukket"
+                ? "Resultatene er skjult til vurderingsrunden er ferdig."
+                : "Gruppens tall vises når du selv har vurdert denne."},
+              antallVurdert(x.id)," har vurdert",
+              visning==="lukket"?null:" · vis ved å vurdere"),
         /* Tallet står for seg og ikke inne i snittet: det sier noe om rommet,
            ikke om hypotesen. */
         s.vetIkke?h("span",{class:"vitall",title:"Så mange har svart «vet ikke» på minst én akse. Teller ikke i snittet."},s.vetIkke," vet ikke"):null),
+      /* Hypoteser fjernes bare fra backend, og da som arkivering. Et feiltrykk
+         her ville tatt med seg alle vurderingene på hypotesen. */
       h("div",{class:"actions"},
-        kladd?null:h("button",{class:"linkbtn",type:"button",onclick:()=>{selected=x.id;render();}},"Vis i matrisen"),
-        h("button",{class:"linkbtn",type:"button",onclick:()=>{editing=x.id;confirmDel=null;render();}},"Rediger"),
-        kladd?h("button",{class:"primary liten",type:"button",onclick:()=>publiser(x.id)},"Publiser"):null,
-        min?h("button",{class:"linkbtn danger",type:"button",onclick:()=>{
-          if(confirmDel===x.id){ confirmDel=null; del(x.id); }
-          else { confirmDel=x.id; render(); setTimeout(()=>{ if(confirmDel===x.id){confirmDel=null;render();} },4000); }
-        }}, confirmDel===x.id?"Trykk igjen for å slette":(kladd?"Forkast":"Slett")):null)];
+        h("button",{class:"linkbtn",type:"button",onclick:()=>{selected=x.id;render();}},"Vis i matrisen"),
+        h("button",{class:"linkbtn",type:"button",onclick:()=>{editing=x.id;render();}},"Rediger"))];
   }
-  return h("article",{class:"card"+(kladd?" erkladd":"")+(selected===x.id?" sel":"")+(!kladd&&s.first?" first":""),id:"c-"+x.id},head,statusForm,...body);
+  return h("article",{class:"card"+(selected===x.id?" sel":"")+(s.first?" first":""),id:"c-"+x.id},head,statusForm,...body);
 }
 const avgKey = s => `${s.k==null?"":s.k.toFixed(2)}|${s.u==null?"":s.u.toFixed(2)}|${s.n}|${s.vetIkke}`;
 
@@ -993,8 +970,8 @@ function hoverKort(p, festet){
   return h("div",{class:"mx-modal"+(festet?" festet":""),role:"dialog","aria-label":nr(x.nr)},
     h("div",{class:"box"},
       h("div",{class:"id"},
-        h("span",{class:"dot",style:`background:${tcolor(x.type)}`}),
-        nr(x.nr)," · ",TYPES[x.type]?.label||""," · ",STATUS[x.status||"ny"]),
+        h("span",{class:"dot",style:`background:${lcolor(x.leveranse)}`}),
+        nr(x.nr)," · ",levKort(x.leveranse)," ",levLabel(x.leveranse)," · ",STATUS[x.status||"ny"]),
       h("p",{class:"claim"},h("span",{class:"pre"},"Vi tror at "),x.tekst||""),
       x.kriterium?h("p",{class:"crit"},h("span",{class:"pre"},"Vi vet det når "),x.kriterium):null,
       h("div",{class:"tall"},
@@ -1057,7 +1034,12 @@ function renderMatrix(){
         const av=erAvklart(x);
         return {x,k:v.k,u:av?1:v.u,utk:!av&&!!utkast[x.id],split:false,laast:av,vetIkke:0,andelVet:0};
       }).filter(Boolean)
-    : hyps.map(x=>{const st=statsFor(x.id);
+    : hyps.map(x=>{
+        /* Uten denne ville «lukket» plottet dine egne tall som om de var
+           gruppens, og «etter egen stemme» ville røpet posisjonen til
+           hypoteser du ennå ikke har tatt stilling til. */
+        if(!visTall(x)) return null;
+        const st=statsFor(x.id);
         if(st.k==null||st.u==null) return null;
         /* Ringen vokser med hvor stor del av rommet som ikke kunne svare.
            Punktet står fortsatt på tallsnittet — det er riktig plassering for
@@ -1097,7 +1079,7 @@ function renderMatrix(){
     if(p.andelVet>0) g.append(s_("circle",{cx,cy,r:(sel?16:13)+(avkreftet?9:5),fill:"none",
       stroke:"var(--muted)","stroke-width":String(1+p.andelVet*1.6),
       "stroke-dasharray":"2 3","stroke-opacity":String(0.35+p.andelVet*0.55)}));
-    g.append(s_("circle",{cx,cy,r:sel?16:13,fill:tcolor(p.x.type),
+    g.append(s_("circle",{cx,cy,r:sel?16:13,fill:lcolor(p.x.leveranse),
       stroke:p.utk?"var(--warn)":(sel?"var(--ink)":"var(--surface)"),
       "stroke-width":p.utk?"3":(sel?"3":"2"),
       "stroke-dasharray":p.utk?"4 2.5":null}));
@@ -1155,15 +1137,23 @@ function renderMatrix(){
     else skjulHover();
   }
 
+  /* Teller hvor mange som faktisk er vurdert, ikke hvor mange som er tegnet.
+     Ellers ville «0 av 28 plassert» i lukket modus lest som at ingen har
+     stemt, når sannheten er at tallene holdes tilbake. */
+  const vurdertAlle = hyps.filter(x=>(antallVurdert(x.id)||0)>0).length;
   $("mx-c").textContent = min
     ? `${pts.length} av ${hyps.length} plassert av deg`
-    : `${pts.length} av ${hyps.length} plassert`;
+    : visning==="apent"
+      ? `${pts.length} av ${hyps.length} plassert`
+      : visning==="lukket"
+        ? `Resultatene er skjult · ${vurdertAlle} av ${hyps.length} er vurdert`
+        : `${pts.length} av ${hyps.length} vist · tallene åpnes når du selv har vurdert`;
 
   /* replaceChildren tar imot noder og strenger — en `null` blir til teksten
      «null» på skjermen. `h()` filtrerer bort falske barn, men her går det rett
      inn, så lista må renses først. */
   $("legend").replaceChildren(...[
-    ...Object.entries(TYPES).map(([k,t])=>h("span",{},h("span",{class:"dot",style:`background:${tcolor(k)}`}),t.label)),
+    ...levSortert().map(d=>h("span",{title:d.label},h("span",{class:"dot",style:`background:${lcolor(d.slug)}`}),"L"+d.nr)),
     min?null:h("span",{},h("span",{class:"dot",style:"background:var(--warn)"}),"Uenige"),
     min?null:h("span",{},h("span",{class:"ring"}),"Noen vet ikke")].filter(Boolean));
 
@@ -1304,13 +1294,17 @@ function renderDetail(){
   if(sx.frist) meta.push(h("span",{class:forfalt(sx.frist)?"late":""},"Frist: ",visDato(sx.frist)));
   $("detail").replaceChildren(
     h("div",{class:"card-head"},h("span",{class:"nr"},nr(sx.nr)),
-      h("span",{class:"type",style:`color:${tcolor(sx.type)}`},TYPES[sx.type]?.label),
+      h("span",{class:"type",style:`color:${lcolor(sx.leveranse)}`},
+        levKort(sx.leveranse)+" "+levLabel(sx.leveranse)),
       h("span",{class:"spacer"}),h("span",{class:"badge"},STATUS[sx.status||"ny"])),
     h("p",{class:"d-claim"},h("span",{class:"pre"},"Vi tror at "),sx.tekst),
     sx.kriterium?h("p",{class:"crit"},h("span",{class:"pre"},"Vi vet det når "),sx.kriterium):h("p",{class:"crit empty"},"Mangler kriterium."),
     meta.length?h("div",{class:"meta"},meta):null,
     sx.kilde?h("p",{class:"kilde"},"Kilde: ",sx.kilde):null,
-    h("p",{class:"avg"},"Kritisk ",h("b",{},fmt(st.k))," · Usikker ",h("b",{},fmt(st.u))," · ",st.n," vurderinger"),
+    visTall(sx)
+      ? h("p",{class:"avg"},"Kritisk ",h("b",{},fmt(st.k))," · Usikker ",h("b",{},fmt(st.u))," · ",st.n," vurderinger")
+      : h("p",{class:"avg skjult"},antallVurdert(sx.id)," har vurdert",
+          visning==="lukket"?" · resultatene er skjult":" · vis ved å vurdere"),
     h("button",{class:"linkbtn",type:"button",onclick:()=>{
       const el=$("c-"+sx.id); if(el) el.scrollIntoView({block:"center",behavior:"smooth"});
     }},"Vis i listen"));
@@ -1348,13 +1342,20 @@ function tickLive(){
 async function refresh(){
   if(!session) return;
   try{
-    /* Kladd er personlig, så tavla må vite hvem som spør. Det gjør den nå via
-       sesjonen i Authorization-hodet — ingen id sendes inn, så ingen kan be om
-       en annens kladder ved å bytte ut en parameter. */
     const b=await rpc("get_board");
-    const alle=b.hypotheses||[];
-    const nextHyps=alle.filter(x=>x.publisert!==false);
-    const nextKladd=alle.filter(x=>x.publisert===false);
+    const nextHyps=b.hypotheses||[];
+    /* Leveransene redigeres i backend og kan endre navn eller nummer midt i en
+       økt. De leses derfor på nytt ved hvert poll, ikke bare ved innlogging. */
+    const nextLev={};
+    for(const d of b.leveranser||[]) nextLev[d.slug]=d;
+    LEVERANSER=nextLev;
+    /* Lenken er en snarvei, ikke en sperre: admin.html ligger offentlig på
+       GitHub Pages, og det er meg_admin() i databasen som avviser alle andre. */
+    erAdmin=!!b.admin;
+    visning=b.resultatvisning||"etter_stemme";
+    tellinger={};
+    for(const t of b.tellinger||[]) tellinger[t.h]={n:t.n,vetIkke:t.vetIkke};
+    $("til-backend").hidden=!erAdmin;
     const nextRates={};
     for(const r of b.ratings||[]){ (nextRates[r.p] ||= {})[r.h]={k:r.k,u:r.u}; }
     lastSync=Date.now(); setLive(true); loaded=true;
@@ -1362,16 +1363,16 @@ async function refresh(){
 
     /* Hopp over rendering når ingenting er endret. Ellers bygges hele lista på
        nytt hvert fjerde sekund, med flimmer og tapt fokus som resultat. */
-    const sig=JSON.stringify([nextHyps,nextKladd,nextRates]);
+    const sig=JSON.stringify([nextHyps,b.leveranser,nextRates,b.tellinger,visning]);
     if(sig===lastSig && !pendingRate.size) return;
     lastSig=sig;
 
-    hyps=nextHyps; kladder=nextKladd; rates=nextRates;
+    hyps=nextHyps; rates=nextRates;
     const mine={...(nextRates[session.pid]||{})};
     for(const id of pendingRate){ if(myRates[id]) mine[id]=myRates[id]; else delete mine[id]; }
     myRates=mine;
     if(selected&&!hyps.some(x=>x.id===selected)) selected=null;
-    if(editing&&!alle.some(x=>x.id===editing)) editing=null;
+    if(editing&&!nextHyps.some(x=>x.id===editing)) editing=null;
     render();
   }catch(e){
     if(e.code==="28000"){ handleErr(e); return; }
@@ -1389,21 +1390,10 @@ function stopPolling(){ if(pollTimer) clearInterval(pollTimer); if(tickTimer) cl
 document.addEventListener("visibilitychange",()=>{ if(!document.hidden&&session) refresh(); });
 
 /* ---------- skriving ---------- */
-async function addHyp(tekst,kriterium,type,kilde,eier,publisert=true){
-  await rpc("add_hypothesis",{p_tekst:tekst,p_kriterium:kriterium,p_type:type,
-    p_kilde:kilde||"",p_eier:eier||"",p_publisert:publisert});
-}
-async function publiser(id){
-  try{
-    const r=await rpc("publish_hypothesis",{p_id:id});
-    editing=null; toast("Publisert som "+nr(r.nr)); lastSig=null; await refresh();
-  }catch(e){ handleErr(e); }
-}
+/* Hypoteser opprettes og arkiveres i backend (admin.html). Her kan deltakerne
+   rette innhold, sette status og vurdere — det er arbeidet i workshopen. */
 async function save(id,patch){
   try{ await rpc("update_hypothesis",{p_id:id,...patch}); skrivingOk(); lastSig=null; await refresh(); }catch(e){ handleErr(e); }
-}
-async function del(id){
-  try{ await rpc("delete_hypothesis",{p_id:id}); toast("Hypotesen er slettet"); lastSig=null; await refresh(); }catch(e){ handleErr(e); }
 }
 const rateTimers={};
 function setRate(id,dim,val){
@@ -1425,37 +1415,6 @@ function setRate(id,dim,val){
   },350);
 }
 
-$("compose-toggle").addEventListener("click",()=>{
-  const f=$("compose"); f.hidden=!f.hidden;
-  $("compose-toggle").setAttribute("aria-expanded",String(!f.hidden));
-  if(!f.hidden) $("f-tekst").focus();
-});
-async function lagreSkjema(publisert){
-  const tekst=$("f-tekst").value.trim(); if(!tekst){ $("f-tekst").focus(); return; }
-  $("f-add").disabled=true; $("f-kladd").disabled=true;
-  try{ await addHyp(tekst,$("f-krit").value.trim(),valgtType("f-type"),$("f-kilde").value.trim(),$("f-eier").value,publisert);
-    $("f-tekst").value=""; $("f-krit").value=""; $("f-kilde").value=""; $("f-tekst").focus();
-    toast(publisert?"Lagt til":"Lagret som kladd"); lastSig=null; refresh();
-  }catch(err){ handleErr(err); }
-  $("f-add").disabled=false; $("f-kladd").disabled=false;
-}
-$("compose").addEventListener("submit",e=>{ e.preventDefault(); lagreSkjema(true); });
-$("f-kladd").addEventListener("click",()=>lagreSkjema(false));
-$("bulk-toggle").addEventListener("click",()=>{ $("bulk").hidden=!$("bulk").hidden; });
-$("bulk-add").addEventListener("click",async()=>{
-  const lines=$("f-bulk").value.split("\n").map(l=>l.trim()).filter(Boolean);
-  if(!lines.length) return;
-  const type=valgtType("f-type"), kilde=$("f-kilde").value.trim(), eier=$("f-eier").value; $("bulk-add").disabled=true;
-  let done=0;
-  try{
-    for(const l of lines){ const [t,...rest]=l.split("|"); const tekst=t.trim().replace(/^vi tror at\s*/i,""); if(!tekst) continue;
-      await addHyp(tekst,rest.join("|").trim(),type,kilde,eier); done++; }
-    $("f-bulk").value=""; toast(`${done} hypoteser lagt til`);
-  }catch(err){ handleErr(err); if(done) toast(`${done} lagt til før feilen`); }
-  $("bulk-add").disabled=false; lastSig=null; refresh();
-});
-$("f-type-wrap").replaceChildren(typeValg("f-type","verdi"));
-$("f-eier-wrap").replaceChildren(eierValg("f-eier",""));
 $("sort").addEventListener("change",e=>{ sort=e.target.value; render(); });
 let qT; $("q").addEventListener("input",e=>{ clearTimeout(qT); qT=setTimeout(()=>{ query=e.target.value.trim(); renderList(); },150); });
 
@@ -1649,7 +1608,7 @@ function logout(){
      refresh-tokenet fortsatt virket for den som måtte få tak i det. */
   if(session&&session.access_token) fetch(`${CFG.supabaseUrl}/auth/v1/logout`,{method:"POST",
     headers:{apikey:CFG.supabaseKey,Authorization:"Bearer "+session.access_token}}).catch(()=>{});
-  store(false,null); session=null; hyps=[]; kladder=[]; rates={}; myRates={}; loaded=false; lastSig=null;
+  store(false,null); session=null; hyps=[]; rates={}; myRates={}; loaded=false; lastSig=null;
   $("ws-name").textContent="Nordlys · forprosjekt";
   skjulBanner();
   /* Adressen fylles inn igjen etter utlogging. Den som logger ut er som regel
@@ -1672,6 +1631,10 @@ $("logout").addEventListener("click",()=>{
 });
 
 /* ---------- storskjerm ---------- */
+/* Storskjermen tvinger «Alles snitt», men den omgår ikke resultatvisningen:
+   radene er allerede holdt tilbake av databasen. Står runden på «lukket», er
+   skjermen tom med vilje — derfor sier banneret hvorfor, ellers leses det som
+   en feil mens hele rommet ser på. */
 function scene(på){
   document.body.classList.toggle("scene", på);
   skjulHover();   // tip og kort hører til hver sin visning
@@ -1693,7 +1656,7 @@ document.addEventListener("keydown",e=>{
 /* ---------- eksport ---------- */
 function rowsForExport(){
   return hyps.slice().sort((a,b)=>a.nr-b.nr).map(x=>{const st=statsFor(x.id);return {
-    nr:nr(x.nr), type:TYPES[x.type]?.label||"", tekst:x.tekst||"", krit:x.kriterium||"",
+    nr:nr(x.nr), type:levLabel(x.leveranse), tekst:x.tekst||"", krit:x.kriterium||"",
     kilde:x.kilde||"", eier:x.eier?eierNavn(x.eier):"", frist:x.frist||"",
     k:fmt(st.k), u:fmt(st.u), n:st.n, status:STATUS[x.status||"ny"],
     /* Avklart status overstyrer usikkerheten til 1. Da må den vurderte verdien
@@ -1701,7 +1664,7 @@ function rowsForExport(){
        og rommets opprinnelige vurdering er ikke til å finne igjen. */
     uVurdert:fmt(st.uRaa),
     belegg:x.status_notat||"", avklartDato:x.status_endret||"", avklartAv:x.status_av||"",
-    av:x.by||"", opprettet:(x.created_at||"").slice(0,10),
+    opprettet:(x.created_at||"").slice(0,10),
     rastatus:x.status||"ny", kk:st.k, uu:st.u, uenig:st.split?"Ja":"",
     forst:st.first?"Ja":""};});
 }
@@ -1789,7 +1752,7 @@ $("exp-csv").addEventListener("click",()=>{
     ["Status",x=>x.status],["Belegg",x=>x.belegg],
     ["Avklart",x=>x.avklartDato],["Avklart av",x=>x.avklartAv],
     ["Må avklares",x=>x.forst],
-    ["Lagt inn av",x=>x.av],["Opprettet",x=>x.opprettet]];
+    ["Opprettet",x=>x.opprettet]];
   const csv=[kol.map(c=>c[0]).join(";"),
     ...rowsForExport().map(x=>kol.map(c=>q(c[1](x))).join(";"))].join("\n");
   download(`nordlys-hypoteser-${today()}.csv`,"\ufeff"+csv,"text/csv");

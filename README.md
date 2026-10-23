@@ -237,7 +237,8 @@ kritikalitet.
 
 ## Filer
 
-- `index.html` – hele appen
+- `index.html` – hele appen for deltakerne
+- `admin.html` – backend: definerer leveransene, legger til og arkiverer hypoteser
 - `config.js` – Supabase-URL og publishable key
 - `AGENTS.md` – arbeidsinstruks for agenter: migreringsrutine, testing, konvensjoner
 - `supabase/migrations/0001_init.sql` – tabeller og funksjoner
@@ -256,6 +257,8 @@ kritikalitet.
 - `supabase/migrations/0014_vet_ikke.sql` – «vet ikke» (0) som eget svar ved siden av 1–10
 - `supabase/migrations/0015_auth_epost.sql` – verifisert e-post via Supabase Auth; passkoden og deltakertokenet fjernes
 - `supabase/migrations/0016_invitasjonsliste.sql` – de 21 inviterte, og sammenslåing av dupliserte deltakere *(ikke i repoet)*
+- `supabase/migrations/0017_backend_og_leveranser.sql` – leveransene erstatter typene, backend for prosjektledelsen, kladd avvikles *(ikke i repoet: utpeker administratorene ved e-post)*
+- `supabase/migrations/0018_resultatvisning.sql` – tre moduser for når gruppens tall vises, håndhevet i databasen
 - `supabase/reparer.sql` – bringer skjemaet i riktig tilstand uansett utgangspunkt
 - `supabase/sjekk_status.sql` – viser hvilke migrasjoner som er anvendt, endrer ingenting
 - `supabase/kjor.sh` – kjører de to over mot Supabase via docker

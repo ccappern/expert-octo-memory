@@ -54,6 +54,64 @@ alter table public.hypotheses drop constraint if exists hypotheses_type_check;
 alter table public.hypotheses add  constraint hypotheses_type_check
   check (type in ('verdi','gjennom','levedykt','aksept','tilp'));
 
+-- ---------- leveransene (0017) ----------
+-- Leveransene erstatter typene som grupperingen registeret rapporteres på. De
+-- ligger som DATA og ikke som konstant i klienten, i motsetning til EIERE:
+-- kilden på Confluence har ødelagt nummerering og uavklart overlapp, så lista
+-- kommer til å bli rettet flere ganger. Med slug som nøkkel og nr som vanlig
+-- kolonne koster hver retting null migrasjoner.
+create table if not exists public.deliverables (
+  id          uuid primary key default extensions.gen_random_uuid(),
+  workshop_id uuid not null references public.workshops(id) on delete cascade,
+  slug        text not null,
+  nr          int  not null,
+  label       text not null,
+  hint        text not null default '',
+  valgbar     boolean not null default true,
+  created_at  timestamptz not null default now(),
+  constraint deliverables_slug_key  unique (workshop_id, slug),
+  constraint deliverables_slug_form check (slug ~ '^[a-z][a-z0-9_]{1,30}$'),
+  constraint deliverables_label_len check (char_length(label) between 1 and 120),
+  constraint deliverables_hint_len  check (char_length(hint) <= 300),
+  constraint deliverables_nr_check  check (nr between 1 and 99)
+);
+-- Indeks og ikke unique: «bytt plass på 2 og 3» ville kollidert midt i
+-- oppdateringen hvis nummeret måtte være unikt hele veien.
+create index if not exists deliverables_nr_idx on public.deliverables (workshop_id, nr);
+
+alter table public.hypotheses add column if not exists leveranse   text;
+alter table public.hypotheses add column if not exists leveranse_2 text;
+
+-- Sammensatt fremmednøkkel mot (workshop_id, slug) gjør to jobber: den hindrer
+-- at en hypotese peker på en leveranse i en annen workshop, og den NEKTER
+-- sletting av en leveranse som er i bruk. Med `on delete set null` ville
+-- hypoteser mistet leveransen stille, og ingen oppdager det før rapporten er feil.
+alter table public.hypotheses drop constraint if exists hypotheses_leveranse_fk;
+alter table public.hypotheses add  constraint hypotheses_leveranse_fk
+  foreign key (workshop_id, leveranse) references public.deliverables (workshop_id, slug);
+alter table public.hypotheses drop constraint if exists hypotheses_leveranse_2_fk;
+alter table public.hypotheses add  constraint hypotheses_leveranse_2_fk
+  foreign key (workshop_id, leveranse_2) references public.deliverables (workshop_id, slug);
+
+alter table public.hypotheses drop constraint if exists hypotheses_leveranse_2_check;
+alter table public.hypotheses add  constraint hypotheses_leveranse_2_check
+  check (leveranse_2 is null or (leveranse is not null and leveranse_2 <> leveranse));
+
+create index if not exists hypotheses_leveranse_idx
+  on public.hypotheses (workshop_id, leveranse) where deleted_at is null;
+
+-- ---------- administratorer (0017) ----------
+alter table public.participants add column if not exists admin boolean not null default false;
+
+-- ---------- resultatvisning (0018) ----------
+-- Sperren mot å se gruppens tall mens man stemmer. Den ligger her og ikke i
+-- klienten fordi den publiserbare nøkkelen er kjent: filtrerer vi bare i
+-- nettleseren, kan hvem som helst lese tallene via RPC-en.
+alter table public.workshops add column if not exists resultatvisning text not null default 'etter_stemme';
+alter table public.workshops drop constraint if exists workshops_resultatvisning_check;
+alter table public.workshops add  constraint workshops_resultatvisning_check
+  check (resultatvisning in ('lukket','etter_stemme','apent'));
+
 -- ---------- identitet: verifisert e-post ----------
 alter table public.participants add column if not exists epost text;
 alter table public.participants drop constraint if exists participants_epost_check;
@@ -122,9 +180,13 @@ begin
      where (n.nspname = 'public'  and p.proname in
              ('join_workshop','get_board','add_hypothesis','update_hypothesis',
               'delete_hypothesis','rate_hypothesis','publish_hypothesis',
-              'min_profil','sett_navn'))
+              'min_profil','sett_navn',
+              'admin_sett_leveranse','admin_slett_leveranse','admin_add_hypothesis',
+              'admin_sett_hypothesis_leveranse','admin_arkiver_hypothesis',
+              'admin_gjenopprett_hypothesis','admin_arkiv',
+              'admin_sett_resultatvisning'))
         or (n.nspname = 'private' and p.proname in
-             ('workshop_by_code','participant_ok','meg','parse_frist'))
+             ('workshop_by_code','participant_ok','meg','meg_admin','parse_frist'))
   loop
     execute 'drop function if exists ' || r.sig || ' cascade';
     v_n := v_n + 1;
@@ -168,6 +230,18 @@ begin
   return btrim(p)::date;
 end $$;
 
+-- Tilgangskontrollen for backend. admin.html ligger offentlig lesbar på GitHub
+-- Pages og skjuler bare knapper; det er denne funksjonen som faktisk stenger
+-- døra. Hver admin-RPC starter med den.
+create function private.meg_admin(out v_pid uuid, out v_ws uuid)
+language plpgsql stable security definer set search_path = '' as $$
+begin
+  select m.v_pid, m.v_ws into v_pid, v_ws from private.meg() m;
+  if not exists (select 1 from public.participants where id = v_pid and admin) then
+    raise exception 'Du har ikke tilgang til backend' using errcode = '42501';
+  end if;
+end $$;
+
 revoke all on all functions in schema private from public, anon, authenticated;
 
 -- ---------- offentlige RPC-er ----------
@@ -200,85 +274,70 @@ end $$;
 
 create function public.get_board()
 returns json language plpgsql stable security definer set search_path = '' as $$
-declare v_pid uuid; v_ws uuid;
+declare v_pid uuid; v_ws uuid; v_modus text;
 begin
   select m.v_pid, m.v_ws into v_pid, v_ws from private.meg() m;
+  select resultatvisning into v_modus from public.workshops where id = v_ws;
+
   return json_build_object(
     'workshop', (select name from public.workshops where id = v_ws),
     'meg', v_pid,
+    'admin', coalesce((select admin from public.participants where id = v_pid), false),
+    'resultatvisning', v_modus,
+    'leveranser', coalesce((
+      select json_agg(json_build_object(
+        'slug', d.slug, 'nr', d.nr, 'label', d.label,
+        'hint', d.hint, 'valgbar', d.valgbar) order by d.nr, d.label)
+      from public.deliverables d where d.workshop_id = v_ws), '[]'::json),
     'hypotheses', coalesce((
       select json_agg(json_build_object(
         'id', h.id, 'nr', h.nr, 'tekst', h.tekst, 'kriterium', h.kriterium,
         'kilde', h.kilde, 'eier', h.eier,
         'frist', to_char(h.frist, 'YYYY-MM-DD'),
-        'type', h.type, 'status', h.status,
+        'type', h.type,
+        'leveranse', h.leveranse, 'leveranse_2', h.leveranse_2,
+        'status', h.status,
         'status_notat', h.status_notat,
         'status_endret', to_char(h.status_endret, 'YYYY-MM-DD'),
         'status_av', sp.name,
         'publisert', h.publisert,
-        'by', p.name, 'by_id', h.created_by,
-        'created_at', h.created_at) order by h.publisert desc, h.nr, h.created_at)
+        'created_at', h.created_at) order by h.nr, h.created_at)
       from public.hypotheses h
-      left join public.participants p  on p.id  = h.created_by
       left join public.participants sp on sp.id = h.status_av
-      where h.workshop_id = v_ws and h.deleted_at is null
-        and (h.publisert or h.created_by = v_pid)), '[]'::json),
-    -- E-post sendes bevisst ikke ut. Vurderingene er anonyme utad, og adressen
-    -- skal ikke bli bakveien til hvem som stemte hva.
+      where h.workshop_id = v_ws and h.deleted_at is null), '[]'::json),
+
+    -- Tellingene er bevisst skilt fra radene. De skal kunne vises også når
+    -- verdiene holdes tilbake, og de røper ingen retning.
+    'tellinger', coalesce((
+      select json_agg(json_build_object(
+        'h', h.id,
+        'n', (select count(*) from public.ratings r
+               where r.hypothesis_id = h.id and r.k >= 1 and r.u >= 1),
+        'vetIkke', (select count(*) from public.ratings r
+                     where r.hypothesis_id = h.id and (r.k = 0 or r.u = 0))))
+      from public.hypotheses h
+      where h.workshop_id = v_ws and h.deleted_at is null), '[]'::json),
+
+    -- Egne vurderinger slipper alltid gjennom: du skal kunne se hva du selv
+    -- har svart, uansett modus.
     'ratings', coalesce((
       select json_agg(json_build_object('h', r.hypothesis_id, 'p', r.participant_id, 'k', r.k, 'u', r.u))
       from public.ratings r join public.hypotheses h on h.id = r.hypothesis_id
-      where h.workshop_id = v_ws and h.deleted_at is null), '[]'::json)
+      where h.workshop_id = v_ws and h.deleted_at is null
+        and (
+          v_modus = 'apent'
+          or r.participant_id = v_pid
+          or (v_modus = 'etter_stemme' and exists (
+                select 1 from public.ratings meg
+                 where meg.hypothesis_id = r.hypothesis_id
+                   and meg.participant_id = v_pid
+                   and meg.k is not null and meg.u is not null))
+        )), '[]'::json)
   );
 end $$;
 
-create function public.add_hypothesis(
-  p_tekst text, p_kriterium text, p_type text, p_kilde text default '',
-  p_eier text default '', p_frist text default null, p_publisert boolean default true)
-returns json language plpgsql volatile security definer set search_path = '' as $$
-declare v_pid uuid; v_ws uuid; v_nr int; v_id uuid;
-begin
-  select m.v_pid, m.v_ws into v_pid, v_ws from private.meg() m;
-  if coalesce(p_publisert, true) then
-    perform 1 from public.workshops where id = v_ws for update;  -- serialiserer nummerering
-    select coalesce(max(nr), 0) + 1 into v_nr from public.hypotheses where workshop_id = v_ws;
-  end if;
-  insert into public.hypotheses (workshop_id, nr, tekst, kriterium, type, kilde, eier, frist,
-                                 created_by, publisert)
-  values (v_ws, v_nr, btrim(p_tekst), coalesce(btrim(p_kriterium), ''), p_type,
-          left(coalesce(btrim(p_kilde), ''), 300),
-          left(coalesce(btrim(p_eier), ''), 200),
-          private.parse_frist(p_frist), v_pid, coalesce(p_publisert, true))
-  returning id into v_id;
-  return json_build_object('id', v_id, 'nr', v_nr);
-end $$;
-
-create function public.publish_hypothesis(p_id uuid)
-returns json language plpgsql volatile security definer set search_path = '' as $$
-declare v_pid uuid; v_ws uuid; v_nr int; v_eier uuid; v_pub boolean; v_tekst text;
-begin
-  select m.v_pid, m.v_ws into v_pid, v_ws from private.meg() m;
-  select created_by, publisert, tekst into v_eier, v_pub, v_tekst
-    from public.hypotheses where id = p_id and workshop_id = v_ws and deleted_at is null;
-  if not found then
-    raise exception 'Hypotesen finnes ikke' using errcode = 'P0002';
-  end if;
-  if v_eier is distinct from v_pid then
-    raise exception 'Du kan bare publisere dine egne kladder' using errcode = '42501';
-  end if;
-  if v_pub then
-    return json_build_object('id', p_id, 'nr', (select nr from public.hypotheses where id = p_id));
-  end if;
-  if btrim(coalesce(v_tekst, '')) = '' then
-    raise exception 'Hypotesen kan ikke være tom' using errcode = '23514';
-  end if;
-  perform 1 from public.workshops where id = v_ws for update;
-  select coalesce(max(nr), 0) + 1 into v_nr from public.hypotheses where workshop_id = v_ws;
-  update public.hypotheses set nr = v_nr, publisert = true, updated_at = now()
-   where id = p_id;
-  return json_build_object('id', p_id, 'nr', v_nr);
-end $$;
-
+-- Deltakerne kan fortsatt rette tekst, eier, frist og status. Det er selve
+-- arbeidet i workshopen. Leveransekoblingen flyttes bare fra backend.
 create function public.update_hypothesis(p_id uuid,
   p_tekst text default null, p_kriterium text default null, p_type text default null,
   p_status text default null, p_kilde text default null,
@@ -286,20 +345,14 @@ create function public.update_hypothesis(p_id uuid,
   p_status_notat text default null)
 returns void language plpgsql volatile security definer set search_path = '' as $$
 declare v_pid uuid; v_ws uuid; v_naa text; v_ny text; v_notat text; v_endret boolean;
-        v_pub boolean; v_av uuid;
 begin
   select m.v_pid, m.v_ws into v_pid, v_ws from private.meg() m;
 
-  select status, publisert, created_by into v_naa, v_pub, v_av
+  select status into v_naa
     from public.hypotheses
    where id = p_id and workshop_id = v_ws and deleted_at is null;
   if not found then
     raise exception 'Hypotesen finnes ikke' using errcode = 'P0002';
-  end if;
-  -- En kladd tilhører den som skriver den. Den er usynlig for andre, så dette
-  -- er et vern mot et kall som går utenom klienten, ikke mot et feiltrykk.
-  if not v_pub and v_av is distinct from v_pid then
-    raise exception 'Kladden tilhører noen andre' using errcode = '42501';
   end if;
 
   v_ny     := coalesce(p_status, v_naa);
@@ -332,25 +385,9 @@ begin
   where id = p_id and workshop_id = v_ws and deleted_at is null;
 end $$;
 
--- Sletting er eierens egen. Hypoteser fra deltakere som er borte (created_by
--- blir null når en deltaker fjernes) kan ingen slette lenger — det er med vilje,
--- siden alternativet er at hvem som helst kan rydde i andres grunnlag.
-create function public.delete_hypothesis(p_id uuid)
-returns void language plpgsql volatile security definer set search_path = '' as $$
-declare v_pid uuid; v_ws uuid; v_av uuid;
-begin
-  select m.v_pid, m.v_ws into v_pid, v_ws from private.meg() m;
-  select created_by into v_av from public.hypotheses
-   where id = p_id and workshop_id = v_ws and deleted_at is null;
-  if not found then
-    raise exception 'Hypotesen finnes ikke' using errcode = 'P0002';
-  end if;
-  if v_av is distinct from v_pid then
-    raise exception 'Du kan bare slette hypoteser du har lagt inn selv' using errcode = '42501';
-  end if;
-  update public.hypotheses set deleted_at = now(), updated_at = now()
-  where id = p_id and workshop_id = v_ws and deleted_at is null;
-end $$;
+-- delete_hypothesis er fjernet i 0017. Deltakerne oppretter ikke lenger egne
+-- hypoteser, så det finnes ikke noe «mitt» å slette. Fjerning skjer fra backend
+-- som arkivering (admin_arkiver_hypothesis), der vurderingene blir stående.
 
 create function public.rate_hypothesis(p_id uuid, p_k smallint, p_u smallint)
 returns void language plpgsql volatile security definer set search_path = '' as $$
@@ -373,32 +410,184 @@ begin
   end if;
 end $$;
 
+-- ---------- backend ----------
+-- Alle starter med meg_admin(). Rekkefølgen er ikke kosmetisk: feiler den,
+-- kjøres ingenting av det under.
+create function public.admin_sett_leveranse(
+  p_slug text, p_nr int, p_label text, p_hint text default '', p_valgbar boolean default true)
+returns json language plpgsql volatile security definer set search_path = '' as $$
+declare v_pid uuid; v_ws uuid; v_slug text;
+begin
+  select m.v_pid, m.v_ws into v_pid, v_ws from private.meg_admin() m;
+  v_slug := lower(btrim(coalesce(p_slug, '')));
+  if v_slug !~ '^[a-z][a-z0-9_]{1,30}$' then
+    raise exception 'Kortnavnet må være 2-31 tegn: små bokstaver, tall og understrek'
+      using errcode = '23514';
+  end if;
+  insert into public.deliverables (workshop_id, slug, nr, label, hint, valgbar)
+  values (v_ws, v_slug, p_nr, btrim(p_label), left(btrim(coalesce(p_hint,'')), 300),
+          coalesce(p_valgbar, true))
+  on conflict (workshop_id, slug) do update
+    set nr = excluded.nr, label = excluded.label,
+        hint = excluded.hint, valgbar = excluded.valgbar;
+  return json_build_object('slug', v_slug);
+end $$;
+
+create function public.admin_slett_leveranse(p_slug text)
+returns void language plpgsql volatile security definer set search_path = '' as $$
+declare v_pid uuid; v_ws uuid; v_n int;
+begin
+  select m.v_pid, m.v_ws into v_pid, v_ws from private.meg_admin() m;
+  -- Fremmednøkkelen ville stoppet dette uansett, men med en melding ingen kan
+  -- handle på. Her får du vite hvor mange som må flyttes først.
+  select count(*) into v_n from public.hypotheses
+   where workshop_id = v_ws and deleted_at is null
+     and (leveranse = p_slug or leveranse_2 = p_slug);
+  if v_n > 0 then
+    raise exception '% hypoteser er koblet til leveransen. Flytt dem før du sletter den.', v_n
+      using errcode = '23503';
+  end if;
+  delete from public.deliverables where workshop_id = v_ws and slug = p_slug;
+end $$;
+
+create function public.admin_add_hypothesis(
+  p_tekst text, p_kriterium text default '', p_leveranse text default null,
+  p_leveranse_2 text default null, p_type text default 'verdi',
+  p_kilde text default '', p_eier text default '', p_frist text default null)
+returns json language plpgsql volatile security definer set search_path = '' as $$
+declare v_pid uuid; v_ws uuid; v_nr int; v_id uuid;
+begin
+  select m.v_pid, m.v_ws into v_pid, v_ws from private.meg_admin() m;
+  if btrim(coalesce(p_tekst, '')) = '' then
+    raise exception 'Hypotesen kan ikke være tom' using errcode = '23514';
+  end if;
+  perform 1 from public.workshops where id = v_ws for update;  -- serialiserer nummerering
+  select coalesce(max(nr), 0) + 1 into v_nr from public.hypotheses where workshop_id = v_ws;
+  insert into public.hypotheses (workshop_id, nr, tekst, kriterium, type,
+                                 leveranse, leveranse_2, kilde, eier, frist,
+                                 created_by, publisert)
+  values (v_ws, v_nr, btrim(p_tekst), left(coalesce(btrim(p_kriterium), ''), 1000),
+          coalesce(p_type, 'verdi'),
+          nullif(btrim(coalesce(p_leveranse, '')), ''),
+          nullif(btrim(coalesce(p_leveranse_2, '')), ''),
+          left(coalesce(btrim(p_kilde), ''), 300),
+          left(coalesce(btrim(p_eier), ''), 200),
+          private.parse_frist(p_frist), v_pid, true)
+  returning id into v_id;
+  return json_build_object('id', v_id, 'nr', v_nr);
+end $$;
+
+create function public.admin_sett_hypothesis_leveranse(
+  p_id uuid, p_leveranse text, p_leveranse_2 text default null)
+returns void language plpgsql volatile security definer set search_path = '' as $$
+declare v_pid uuid; v_ws uuid;
+begin
+  select m.v_pid, m.v_ws into v_pid, v_ws from private.meg_admin() m;
+  update public.hypotheses
+     set leveranse   = nullif(btrim(coalesce(p_leveranse, '')), ''),
+         leveranse_2 = nullif(btrim(coalesce(p_leveranse_2, '')), ''),
+         updated_at  = now()
+   where id = p_id and workshop_id = v_ws and deleted_at is null;
+  if not found then
+    raise exception 'Hypotesen finnes ikke' using errcode = 'P0002';
+  end if;
+end $$;
+
+-- Arkivering, ikke sletting. En ekte delete ville tatt med seg alle stemmene
+-- via cascade, og det finnes ingen angreknapp midt i en workshop.
+create function public.admin_arkiver_hypothesis(p_id uuid)
+returns void language plpgsql volatile security definer set search_path = '' as $$
+declare v_pid uuid; v_ws uuid;
+begin
+  select m.v_pid, m.v_ws into v_pid, v_ws from private.meg_admin() m;
+  update public.hypotheses set deleted_at = now(), updated_at = now()
+   where id = p_id and workshop_id = v_ws and deleted_at is null;
+  if not found then
+    raise exception 'Hypotesen finnes ikke, eller er allerede arkivert' using errcode = 'P0002';
+  end if;
+end $$;
+
+create function public.admin_gjenopprett_hypothesis(p_id uuid)
+returns void language plpgsql volatile security definer set search_path = '' as $$
+declare v_pid uuid; v_ws uuid;
+begin
+  select m.v_pid, m.v_ws into v_pid, v_ws from private.meg_admin() m;
+  update public.hypotheses set deleted_at = null, updated_at = now()
+   where id = p_id and workshop_id = v_ws and deleted_at is not null;
+  if not found then
+    raise exception 'Hypotesen finnes ikke, eller er ikke arkivert' using errcode = 'P0002';
+  end if;
+end $$;
+
+-- Arkivet er bare synlig for admin. Deltakerne skal ikke se et lag med
+-- hypoteser som er tatt ut av grunnlaget.
+create function public.admin_arkiv()
+returns json language plpgsql stable security definer set search_path = '' as $$
+declare v_pid uuid; v_ws uuid;
+begin
+  select m.v_pid, m.v_ws into v_pid, v_ws from private.meg_admin() m;
+  return coalesce((
+    select json_agg(json_build_object(
+      'id', h.id, 'nr', h.nr, 'tekst', h.tekst, 'leveranse', h.leveranse,
+      'arkivert', to_char(h.deleted_at, 'YYYY-MM-DD')) order by h.deleted_at desc)
+    from public.hypotheses h
+    where h.workshop_id = v_ws and h.deleted_at is not null), '[]'::json);
+end $$;
+
+create function public.admin_sett_resultatvisning(p_modus text)
+returns void language plpgsql volatile security definer set search_path = '' as $$
+declare v_pid uuid; v_ws uuid;
+begin
+  select m.v_pid, m.v_ws into v_pid, v_ws from private.meg_admin() m;
+  if p_modus not in ('lukket','etter_stemme','apent') then
+    raise exception 'Ukjent modus: %', p_modus using errcode = '23514';
+  end if;
+  update public.workshops set resultatvisning = p_modus where id = v_ws;
+end $$;
+
 -- ---------- rettigheter ----------
 -- anon får ingenting. Uten sesjon finnes det ingen identitet å handle som.
 revoke all on function public.min_profil() from public, anon;
 revoke all on function public.sett_navn(text) from public, anon;
 revoke all on function public.get_board() from public, anon;
-revoke all on function public.add_hypothesis(text,text,text,text,text,text,boolean) from public, anon;
-revoke all on function public.publish_hypothesis(uuid) from public, anon;
 revoke all on function public.update_hypothesis(uuid,text,text,text,text,text,text,text,text) from public, anon;
-revoke all on function public.delete_hypothesis(uuid) from public, anon;
 revoke all on function public.rate_hypothesis(uuid,smallint,smallint) from public, anon;
+revoke all on function public.admin_sett_leveranse(text,int,text,text,boolean) from public, anon;
+revoke all on function public.admin_slett_leveranse(text) from public, anon;
+revoke all on function public.admin_add_hypothesis(text,text,text,text,text,text,text,text) from public, anon;
+revoke all on function public.admin_sett_hypothesis_leveranse(uuid,text,text) from public, anon;
+revoke all on function public.admin_arkiver_hypothesis(uuid) from public, anon;
+revoke all on function public.admin_gjenopprett_hypothesis(uuid) from public, anon;
+revoke all on function public.admin_arkiv() from public, anon;
+revoke all on function public.admin_sett_resultatvisning(text) from public, anon;
 
 grant execute on function public.min_profil() to authenticated;
 grant execute on function public.sett_navn(text) to authenticated;
 grant execute on function public.get_board() to authenticated;
-grant execute on function public.add_hypothesis(text,text,text,text,text,text,boolean) to authenticated;
-grant execute on function public.publish_hypothesis(uuid) to authenticated;
 grant execute on function public.update_hypothesis(uuid,text,text,text,text,text,text,text,text) to authenticated;
-grant execute on function public.delete_hypothesis(uuid) to authenticated;
 grant execute on function public.rate_hypothesis(uuid,smallint,smallint) to authenticated;
+
+-- Admin-RPC-ene er kjørbare for alle innloggede. Det er meg_admin() som avviser
+-- dem, ikke rettigheten: en 42501 gir en forståelig feilmelding, mens manglende
+-- EXECUTE gir «function does not exist» og sender folk på villspor etter en
+-- migrasjon som ikke er kjørt.
+grant execute on function public.admin_sett_leveranse(text,int,text,text,boolean) to authenticated;
+grant execute on function public.admin_slett_leveranse(text) to authenticated;
+grant execute on function public.admin_add_hypothesis(text,text,text,text,text,text,text,text) to authenticated;
+grant execute on function public.admin_sett_hypothesis_leveranse(uuid,text,text) to authenticated;
+grant execute on function public.admin_arkiver_hypothesis(uuid) to authenticated;
+grant execute on function public.admin_gjenopprett_hypothesis(uuid) to authenticated;
+grant execute on function public.admin_arkiv() to authenticated;
+grant execute on function public.admin_sett_resultatvisning(text) to authenticated;
 
 -- RLS skal fortsatt være på, uten policies. All tilgang går via funksjonene.
 alter table public.workshops    enable row level security;
 alter table public.participants enable row level security;
 alter table public.hypotheses   enable row level security;
 alter table public.ratings      enable row level security;
-revoke all on public.workshops, public.participants, public.hypotheses, public.ratings from anon, authenticated;
+alter table public.deliverables enable row level security;
+revoke all on public.workshops, public.participants, public.hypotheses, public.ratings,
+              public.deliverables from anon, authenticated;
 
 -- ---------- be PostgREST lese skjemaet på nytt ----------
 notify pgrst, 'reload schema';
