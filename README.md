@@ -37,6 +37,47 @@ Den tredje raden er den som er lett å hoppe over, og den som skiller en moden a
 en tynn en: si eksplisitt hva dere har valgt å ikke finne ut av. Står det ikke der, ser det
 ut som dere ikke tenkte på det.
 
+## Trakten
+
+Verktøyet er ikke et hypoteseregister med en matrise ved siden av. Det er et verktøy for å
+fasilitere en workshop, og leveransen er en liste over hva som må avklares, av hvem, innen
+når. Den lista er **konklusjonen**, og derfor kommer den sist.
+
+Det var den opprinnelige feilen: «Må avklares» fantes fra det øyeblikket én person hadde
+vurdert én hypotese. Lista lå åpen gjennom hele prosessen som om den var en statusvisning,
+og de første stemmene satte dagsordenen — resten av workshopen gikk med på å forsvare eller
+korrigere noe som allerede sto på skjermen, i stedet for å bygge det.
+
+Rommet flyttes derfor gjennom seks steg. Fasilitator styrer takten fra `admin.html`:
+
+| # | Steg | Spørsmålet |
+|---|---|---|
+| 1 | Les | Forstår alle hva som står her? |
+| 2 | Vurder individuelt | Hva mener jeg? |
+| 3 | Gruppeforslag | Hva kan vi alle leve med? |
+| 4 | Står du ved det? | Er jeg fortsatt uenig? |
+| 5 | Plenum | Hva gjenstår, og hva gjør vi med det? |
+| 6 | Oppgaver | Hvem gjør hva, innen når? |
+
+**Verktøyet flytter ikke seg selv.** Det viser bare om steget er ferdig — «18 av 21 har
+vurdert alle», «2 grupper gjenstår». Automatisk framrykking ville dratt rommet videre midt i
+en setning. Steg kan rygges, og da sier verktøyet fra hva som står lenger framme.
+
+Når steg 2 lukkes, fryses et utvalg på det gruppene faktisk rekker, og gruppene regnes ut.
+Steg 2 er låst gjennom steg 3: gruppa trenger et stabilt utgangspunkt, og et tall som flytter
+seg mens samtalen pågår er ikke et utgangspunkt. Ved inngangen til plenum beregnes det
+endelige tallet — snittet av gruppeforslagene for det som gikk til gruppearbeid, ellers
+individsnittet. Fasilitator overstyrer bare der rommet faktisk gjorde noe.
+
+Sperrene ligger i databasen, ikke i klienten. Nøkkelen i `config.js` er offentlig, så en
+sperre i nettleseren er ingen sperre.
+
+**Steg 4 og den stille kanalen er planlagt, men ikke bygget.** Verdien `staaved` står i
+databasen, og en fritekstinnvending vist uten navn er beskrevet i
+`docs/plan-workshopoppgaver.md` — ingen av delene finnes i appen. Konsensus måles i mellomtiden
+som sprik **mellom** gruppene, og det er en svakere erstatning som er verdt å si høyt: den
+fanger ikke den som ble overkjørt inne i sin egen gruppe.
+
 ## Å vurdere
 
 Skalaen er **1–10** på begge akser. Den har bevisst ikke noe midtpunkt: 5,5 finnes ikke som
@@ -241,6 +282,7 @@ kritikalitet.
 - `admin.html` – backend: definerer leveransene, legger til og arkiverer hypoteser
 - `config.js` – Supabase-URL og publishable key
 - `AGENTS.md` – arbeidsinstruks for agenter: migreringsrutine, testing, konvensjoner
+- `docs/plan-workshopoppgaver.md` – trakten, gruppene og konsensus: hva som er bygget, og hva som er utsatt
 - `supabase/migrations/0001_init.sql` – tabeller og funksjoner
 - `supabase/migrations/0002_kilde.sql` – kildefelt på hypotesene
 - `supabase/migrations/0003_seed_forprosjekt.sql` – de 21 hypotesene fra forprosjektet
@@ -261,6 +303,7 @@ kritikalitet.
 - `supabase/migrations/0018_resultatvisning.sql` – tre moduser for når gruppens tall vises, håndhevet i databasen
 - `supabase/migrations/0019_confluence_rytme.sql` – Confluence skrives ikke lenger ved hver vurdering
 - `supabase/migrations/0020_deltakertall.sql` – antall inviterte og antall som har vurdert, talt i databasen
+- `supabase/migrations/0021_oppgaver_og_grupper.sql` – trakten: seks steg, grupper, gruppeforslag og det endelige tallet
 - `supabase/reparer.sql` – bringer skjemaet i riktig tilstand uansett utgangspunkt
 - `supabase/sjekk_status.sql` – viser hvilke migrasjoner som er anvendt, endrer ingenting
 - `supabase/kjor.sh` – kjører de to over mot Supabase via docker

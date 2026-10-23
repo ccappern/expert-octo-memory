@@ -75,6 +75,13 @@ button.primary:disabled{opacity:.5;cursor:default}
 @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(44,122,52,.5)}70%{box-shadow:0 0 0 7px rgba(44,122,52,0)}100%{box-shadow:0 0 0 0 rgba(44,122,52,0)}}
 @media (prefers-reduced-motion: reduce){.live.on .dot{animation:none}}
 
+/* Oppgaveindikatoren står i topplinja og ikke i verktøylinja: uten den vet
+   ikke deltakeren hvorfor skalaen plutselig oppfører seg annerledes, og det
+   spørsmålet kommer før hun ser ned på innholdet. */
+.steg{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;
+  background:var(--accent-soft);color:var(--accent);border-radius:999px;padding:4px 12px;white-space:nowrap}
+.steg .g{color:var(--ink);font-weight:700}
+
 /* ---------- sammendrag ---------- */
 .summary{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin:18px 0}
 .kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:13px 15px;min-width:0}
@@ -126,6 +133,13 @@ button.primary:disabled{opacity:.5;cursor:default}
    bredere enn rundt 90 tegn for å være lesbar. */
 .cols{display:grid;grid-template-columns:minmax(0,1fr) clamp(520px,46vw,860px);gap:20px;align-items:start;padding-bottom:40px}
 .col-side{position:sticky;top:78px;display:grid;gap:14px;max-height:calc(100vh - 92px);overflow:auto}
+/* Visningsvalget skjuler en hel kolonne i stedet for å krympe den. En matrise
+   på tredjedels bredde er ikke en mindre matrise, den er uleselig — og en
+   leseflate ved siden av et tomt panel ser ut som om noe mangler. */
+.cols.bare-matrise{grid-template-columns:minmax(0,1fr)}
+.cols.bare-matrise .col-main{display:none}
+.cols.uten-matrise{grid-template-columns:minmax(0,1fr)}
+.cols.uten-matrise .col-side{display:none}
 
 /* ---------- verktøylinje ---------- */
 .toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px}
@@ -218,6 +232,71 @@ select.status{border:1px solid var(--line);background:var(--bg);border-radius:7p
   border-radius:8px;padding:9px 11px;width:100%}
 .who{font-size:12px;color:var(--muted)}
 .mine{font-size:12px;color:var(--accent);font-weight:600}
+
+/* Detaljene ligger bak en bryter fordi eier, frist, kilde og belegg leses når
+   noen skal GJØRE noe med hypotesen, ikke når de skal vurdere den. Kortet går
+   fra rundt førti elementer til rundt tolv uten at noe er fjernet fra appen. */
+.detaljer{display:grid;gap:7px;padding-top:2px}
+.detaljer .meta{margin:0}
+
+/* ---------- lesemodus ---------- */
+/* Én hypotese om gangen i en smal spalte. Tjue minutter på seksten hypoteser
+   er 75 sekunder hver, og et kort med førti elementer bruker halvparten av den
+   tiden på å finne påstanden. Spalta låses til rundt 60 tegn — det er der
+   lesbarheten ligger, ikke de 90 kortene har. */
+.les{max-width:62ch;margin:0 auto;display:grid;gap:18px;padding:10px 0 40px}
+.les .hode{text-align:center;display:grid;gap:5px}
+.les .hode .id{font:600 13px/1.2 var(--f-mono);color:var(--muted);letter-spacing:.05em}
+/* Framdriften som to tall og ikke som en ring: spørsmålet er «hvor langt har
+   jeg igjen», og da er «7 av 16» klarere enn et bilde. */
+.les .hode .av{font-family:var(--f-display);font-size:15px;font-weight:700;font-variant-numeric:tabular-nums}
+.les .pastand{font-size:21px;line-height:1.45;margin:0}
+.les .nar{font-size:17px;line-height:1.5;color:var(--muted);margin:0}
+.les .rate{justify-items:stretch;gap:12px}
+.les .scale{gap:12px}
+.les .scale .lbl{min-width:70px;font-size:14px}
+.les .bla{display:flex;justify-content:space-between;align-items:center;gap:12px;
+  border-top:1px solid var(--line);padding-top:14px}
+.les .bla button{border:1px solid var(--line);background:var(--surface);border-radius:999px;
+  padding:8px 18px;font-size:14px;font-weight:600;cursor:pointer}
+.les .bla button:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
+.les .bla button:disabled{opacity:.4;cursor:default}
+.les .hint{font-size:12.5px;color:var(--muted);text-align:center;margin:0}
+
+/* ---------- steg 3: gruppeforslag ---------- */
+/* Prikkene er gruppas egne medlemmers verdier fra steg 2, uten navn. Startet
+   dere på 3 og 9, ligger spriket på bordet og kan ikke bortforklares — det er
+   hele motgiften mot at den mest seniore avgjør. */
+.sprik{display:block;width:100%;height:26px}
+.gr-rolle{background:var(--sunk);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--muted);
+  display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.gr-rolle b{color:var(--ink)}
+.gr-sist{font-size:12.5px;color:var(--muted);text-align:center;margin:0}
+.gr-les{font-size:14px;line-height:1.5;background:var(--sunk);border-radius:8px;padding:9px 12px;margin:0}
+.gr-les b{font-variant-numeric:tabular-nums}
+.gr-hensyn{display:grid;gap:5px}
+.gr-hensyn label{font-size:13px;font-weight:600}
+.gr-hensyn textarea{border:1px solid var(--line);background:var(--bg);border-radius:8px;
+  padding:9px 11px;width:100%;resize:vertical;min-height:60px}
+.gr-hensyn .hvorfor{font-size:12.5px;color:var(--muted);margin:0}
+
+/* ---------- bunker (steg 5 og 6) ---------- */
+.bunke{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
+  padding:14px 16px;margin-bottom:14px;display:grid;gap:9px}
+.bunke.maa{border-color:var(--accent);border-left:4px solid var(--accent)}
+.bunke.varsel{border-color:var(--warn);border-left:4px solid var(--warn)}
+.bunke h3{margin:0;font-size:16px;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.bunke h3 .c{font-size:13px;color:var(--muted);font-weight:400;font-variant-numeric:tabular-nums}
+.bunke .ingress{margin:0;font-size:13px;color:var(--muted)}
+.bunke ol{margin:0;padding-left:22px;display:grid;gap:8px}
+.bunke li{font-size:14.5px;line-height:1.45}
+.bunke li .nr{margin-right:7px}
+.bunke .tom{font-size:13.5px;color:var(--muted);font-style:italic;margin:0}
+/* Gruppenes forslag side om side i plenum: der de spriker, har rommet et reelt
+   uavklart premiss og ikke bare støy. */
+.gsprik{display:flex;flex-wrap:wrap;gap:5px 10px;font-size:12.5px;color:var(--muted);margin-top:4px}
+.gsprik span{font-variant-numeric:tabular-nums;background:var(--sunk);border-radius:6px;padding:1px 7px}
+.gsprik span b{color:var(--ink)}
 
 /* ---------- høyre kolonne ---------- */
 .pane{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;display:grid;gap:9px;min-width:0}
@@ -374,6 +453,7 @@ body.scene header.top{min-height:52px}
     <span class="eyebrow" id="ws-name">Nordlys · forprosjekt</span>
   </div>
   <div class="top-actions" id="nav" hidden>
+    <span class="steg" id="steg-ind" hidden></span>
     <span class="live" id="live"><span class="dot"></span><span id="live-t"></span></span>
     <button class="me" id="me-name" type="button" title="Klikk for å rette navnet ditt"></button>
     <a class="ghost" id="til-backend" href="admin.html" hidden>Backend</a>
@@ -420,9 +500,14 @@ body.scene header.top{min-height:52px}
   <div id="app" hidden>
     <div class="summary" id="summary"></div>
 
-    <div class="cols">
+    <div class="cols" id="cols">
       <div class="col-main">
-        <div class="toolbar">
+        <div class="toolbar" id="toolbar">
+          <span class="modes" id="vis-valg" role="group" aria-label="Visning">
+            <button class="mode" type="button" data-vis="les" aria-pressed="true">Les</button>
+            <button class="mode" type="button" data-vis="liste" aria-pressed="false">Liste</button>
+            <button class="mode" type="button" data-vis="matrise" aria-pressed="false">Matrise</button>
+          </span>
           <input class="search" id="q" type="search" placeholder="Søk i hypoteser, kriterier, eiere …" aria-label="Søk">
           <select class="sort" id="sort" aria-label="Sortering">
             <option value="nr">Nummer</option>
@@ -434,6 +519,7 @@ body.scene header.top{min-height:52px}
         </div>
 
         <div id="list"></div>
+        <div id="les" hidden></div>
       </div>
 
       <aside class="col-side">
@@ -560,6 +646,56 @@ let lastSig=null, lastSync=0, online=true, prevAvg={};
    ligger mens du stemmer, havner du der selv. */
 let mxMode="snitt", utkast={}, dragId=null, sistDrag=0, rafId=null;
 let bannerVarig=false;
+
+/* ---------- trakten ---------- */
+/* Seks tilstander, og fasilitator flytter rommet framover fra admin.html.
+   Verktøyet flytter ikke seg selv: automatisk framrykking ville dratt rommet
+   videre midt i en setning. Rekkefølgen er det eneste denne tabellen brukes
+   til — nesten hver regel er «fra og med dette steget». */
+const STEG = {
+  les:         {nr:1, navn:"Les"},
+  individuell: {nr:2, navn:"Vurder individuelt"},
+  gruppe:      {nr:3, navn:"Gruppeforslag"},
+  staaved:     {nr:4, navn:"Står du ved det?"},
+  plenum:      {nr:5, navn:"Plenum"},
+  oppgaver:    {nr:6, navn:"Oppgaver"}
+};
+const stegNr = o => (STEG[o] || {}).nr || 0;
+
+let oppgave="individuell";
+/* Første svar fra get_board teller alltid som et stegbytte: ellers ville en
+   lagret visning fra et annet steg overlevd en F5 inn i et nytt steg. */
+let stegSett=false;
+let grupper=[];                 // hele inndelingen; den ER beskjeden på storskjermen
+let minGruppe=null;             // {slug,label,sted,frist_tekst,leder,leder_navn,er_leder}
+let gruppeRates={};             // hypotese-id → [{g,k,u,hensyn,av,tid}]
+let gruppeFramdrift=[];         // [{g,n,av}] — telles i databasen, ikke av radene vi har
+/* null betyr «steget er ikke åpnet», ikke «ingenting havnet i bunken».
+   Oppgavelista er konklusjonen, og den sendes ikke før fasilitator åpner den. */
+let oppgaveliste=null;
+/* Hvilken hypotese lesemodus og steg 3-skjermen står på. Klemmes mot
+   visible().length ved hver refresh — arkiveres hypotesen du står på, skal du
+   ikke havne på en tom skjerm. */
+let lesIdx=0;
+
+/* Visningsvalget. Lagres per deltaker fordi den som har funnet sin visning
+   ikke skal kastes ut av den hvert fjerde sekund. `visSteg` husker hvilket
+   steg valget ble tatt i: appen åpner i Les ved et nytt steg, men bare hvis
+   deltakeren ikke selv har valgt noe etter stegbyttet. Overstyrer vi hver
+   gang, kastes folk tilbake til lesemodus midt i arbeidet. */
+const VISKEY="nordlys-hyp-visning";
+let vis="les", visSteg=null;
+try{ const o=JSON.parse(localStorage.getItem(VISKEY)||"null");
+     if(o&&o.vis){ vis=o.vis; visSteg=o.steg||null; } }catch(e){}
+
+/* Hvilke kort som har detaljene utslått. Et Set av id-er og IKKE et attributt
+   på DOM-elementet: lista bygges på nytt hvert fjerde sekund, og en tilstand
+   som bor i et element som byttes ut lukker seg selv like ofte. */
+let detaljerApne=new Set();
+/* Fritekst som er skrevet, men ikke skrevet ferdig. Så lenge en id står her,
+   skal feltet ikke bygges på nytt — et felt som erstattes mister ikke bare
+   fokus, men teksten. */
+let hensynUtkast={};
 
 const $ = id => document.getElementById(id);
 function h(tag, attrs, ...kids){
@@ -744,6 +880,75 @@ function eierValg(id, valgt){
 }
 const ferdigVurdert = x => { const m=myRates[x.id]; return !!m && harSvart(m.k) && harSvart(m.u); };
 
+/* ---------- trakten: avledet tilstand ---------- */
+/* Velgeren gjelder bare i les, individuell og gruppe. I plenum og oppgaver
+   styrer steget visningen helt, og da skjules den — knapper som ikke gjør noe
+   lærer folk at verktøyet er i stykker. */
+const velgerSynlig = () => stegNr(oppgave) <= 3;
+function visningNaa(){
+  if(oppgave==="plenum")   return "plenum";
+  if(oppgave==="oppgaver") return "oppgaver";
+  /* I steg 3 er leseflaten gruppeforslaget. Det er samme bevegelse — én
+     hypotese om gangen — bare med gruppas skjerm i stedet for din egen. */
+  if(oppgave==="gruppe" && vis==="les") return "gruppe";
+  return vis;
+}
+function settVisning(v){
+  vis=v; visSteg=oppgave;
+  try{ localStorage.setItem(VISKEY, JSON.stringify({vis,steg:oppgave})); }catch(e){}
+  lesIdx=0; render();
+}
+
+/* Utvalget gruppene faktisk rekker (§5). Fryses når steg 2 lukkes, og er
+   nevneren i «9 av 11» — «9 av 23» leses som fiasko selv når gruppa gjorde
+   nøyaktig det den skulle. */
+const utvalget = () => hyps.filter(x=>x.i_gruppearbeid).sort((a,b)=>a.nr-b.nr);
+const erLeder  = () => !!(minGruppe && minGruppe.er_leder);
+const minGruppeRad = id => minGruppe
+  ? (gruppeRates[id]||[]).find(r=>r.g===minGruppe.slug) || null : null;
+const gruppeMedlemmer = () => {
+  const g = minGruppe && grupper.find(q=>q.slug===minGruppe.slug);
+  return (g && g.medlemmer) || [];
+};
+/* Gruppas egne medlemmers verdier fra steg 2, uten navn. Databasen slipper
+   radene fra og med steg 3 nettopp for dette (§6). */
+function medlemsVerdier(id, dim){
+  const ut=[];
+  for(const m of gruppeMedlemmer()){
+    const v = (allRates()[m.id]||{})[id];
+    if(v && erTall(v[dim])) ut.push(v[dim]);
+  }
+  return ut.sort((a,b)=>a-b);
+}
+/* Hensyn skrives selektivt, ikke på alt: bare der gruppa selv ikke ble enig,
+   eller der de legger hypotesen høyt på begge akser. Det kapper skrivingen til
+   en håndfull per gruppe, og det er nøyaktig de hypotesene den har verdi for. */
+function hensynKreves(id){
+  const r=minGruppeRad(id);
+  if(r && erTall(r.k) && erTall(r.u) && r.k>MIDT && r.u>MIDT) return "høyt på begge akser";
+  for(const dim of ["k","u"]){
+    const v=medlemsVerdier(id,dim);
+    if(v.length>=2 && v[v.length-1]-v[0] >= SPRIK) return "dere startet ulikt";
+  }
+  return null;
+}
+const klokke = t => { const d=new Date(t); return isNaN(d) ? "" :
+  String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"); };
+
+/* rate_hypothesis avviser skriving utenfor steg 2. Skalaene tegnes derfor
+   bare der, slik at ingen trykker seg fram til en feilmelding om en sperre de
+   ikke kunne se. */
+const kanVurdereSelv = () => oppgave==="individuell";
+function minVurderingTekst(x){
+  const v=myRates[x.id];
+  const mitt = v && (harSvart(v.k)||harSvart(v.u))
+    ? `Du svarte: kritisk ${erVetIkke(v.k)?"vet ikke":v.k ?? "–"}, usikker ${erVetIkke(v.u)?"vet ikke":v.u ?? "–"}. `
+    : "Du rakk ikke å vurdere denne. ";
+  if(oppgave==="les")    return mitt+"Vurderingen åpnes når fasilitator starter steg 2.";
+  if(oppgave==="gruppe") return mitt+"Den individuelle vurderingen er låst mens gruppene jobber.";
+  return mitt+"Den individuelle vurderingen er lukket.";
+}
+
 /* ---------- sammendrag ---------- */
 /* Hvert kort skal svare på ett spørsmål, og bildet skal legge til noe tallet
    ikke sier. Ingen av dem er en tidsserie: vi lagrer ikke historikk, så en
@@ -797,6 +1002,11 @@ function renderSummary(){
       o.onclick?h("button",{type:"button",onclick:o.onclick},inner):inner);
   };
 
+  /* Sammendraget byttes ut per steg. Et KPI-felt som teller noe steget ikke
+     handler om, er støy med autoritet — og i steg 3 og utover handler ingen av
+     de fem under om det rommet faktisk gjør nå. */
+  if(stegNr(oppgave)>=3){ $("summary").replaceChildren(...stegKort(kort)); return; }
+
   $("summary").replaceChildren(
     kort({hd:"Registeret", n:[String(totalt)],
       sub:`fordelt på ${levSortert().length} leveranser`,
@@ -843,6 +1053,72 @@ function renderSummary(){
               sub:"bekreftet eller avkreftet",
               viz:h("div",{class:"bar"},h("i",{style:`width:${totalt?100*avklart/totalt:0}%`}))})
   );
+}
+
+/* ---------- sammendrag per steg ---------- */
+function stegKort(kort){
+  const utv=utvalget();
+  if(oppgave==="gruppe"){
+    const min=minGruppe ? gruppeFramdrift.find(f=>f.g===minGruppe.slug) : null;
+    const n=min?min.n:0, av=min?min.av:utv.length;
+    const ferdige=gruppeFramdrift.filter(f=>f.av>0 && f.n>=f.av).length;
+    return [
+      kort({hd:"Utvalget", n:[String(utv.length)],
+        sub:"hypoteser gruppene rekker", viz:kpiPrikker(n, utv.length)}),
+      kort({cls:"hot", hd:"Din gruppe", n:[String(n),h("s",{},"av "+av)],
+        sub: minGruppe ? minGruppe.label+(minGruppe.sted?" · "+minGruppe.sted:"") : "ingen gruppe",
+        ring:kpiRing(av?n/av:0)}),
+      kort({hd:"Rommet", n:[String(ferdige),h("s",{},"av "+(gruppeFramdrift.length||"–"))],
+        sub:"grupper er ferdige",
+        viz:kpiPrikker(ferdige, gruppeFramdrift.length)}),
+      /* Skriveretten er den eneste nye enkeltfeilkilden i hele trakten, og den
+         må stå der folk ser den — ikke bare som knapper som mangler. */
+      kort({cls:erLeder()?"hot":"", hd:"Fører i pennen",
+        n:[erLeder()?"Deg":(minGruppe&&minGruppe.leder_navn)||"Ingen"],
+        sub: erLeder() ? "du skriver, gruppen bestemmer"
+           : minGruppe ? "gruppen bestemmer sammen" : "si fra til fasilitator"})
+    ];
+  }
+  if(oppgave==="plenum"){
+    const sprik=hyps.filter(x=>x.gruppesprik);
+    const kvittert=sprik.filter(x=>x.plenum_utfall).length;
+    return [
+      kort({cls:"hot", hd:"På agendaen", n:[String(sprik.length-kvittert)],
+        sub: sprik.length ? "gruppene havnet i ulikt felt" : "gruppene landet likt",
+        ring:kpiRing(sprik.length?kvittert/sprik.length:1)}),
+      kort({hd:"Behandlet", n:[String(kvittert),h("s",{},"av "+sprik.length)],
+        sub:"kvittert ut av fasilitator",
+        viz:kpiPrikker(kvittert, sprik.length)}),
+      kort({hd:"Grupper", n:[String(grupper.length)],
+        sub:"forslagene ligger i matrisen"}),
+      kort({hd:"Registeret", n:[String(hyps.length)],
+        sub:`${utv.length} gikk gjennom gruppearbeid`})
+    ];
+  }
+  // oppgaver
+  const o=oppgaveliste||{};
+  const antall=k=>(o[k]||[]).length;
+  return [
+    kort({cls:"hot", hd:"Må leveres", n:[String(antall("maa"))],
+      sub:"kritisk og usikker — dette er forprosjektets jobb"}),
+    kort({hd:"Premiss", n:[String(antall("premiss"))],
+      sub:"kritisk, men avklart. Skrives ned, utredes ikke"}),
+    /* Bunken bør helst være tom. Er den det ikke, er det det viktigste
+       forprosjektet har å rapportere — en frist hjelper ikke når ingen vet
+       hvor svaret finnes. */
+    antall("ingen_svar")
+      ? kort({cls:"warn", hd:"Ingen kan svare", n:[String(antall("ingen_svar"))],
+          sub:"kunnskapen må hentes utenfra"})
+      : kort({cls:"rolig", hd:"Ingen kan svare", n:["0"], sub:"alle har et tall"}),
+    kort({hd:"Eskalert", n:[String(antall("eskalert"))],
+      sub:"går til styringsgruppen som spørsmål"}),
+    /* §9: sperren foran dette steget er myk, men ikke gratis. Antallet står
+       her fordi det også skrives i eksporten og på Confluence. */
+    o.ubehandlet
+      ? kort({cls:"warn", hd:"Ubehandlet", n:[String(o.ubehandlet)],
+          sub:"saker plenum ikke rakk. Lista er laget likevel"})
+      : kort({cls:"rolig", hd:"Plenum", n:["Ferdig"], sub:"alle saker er behandlet"})
+  ];
 }
 
 /* ---------- filtre ---------- */
@@ -937,6 +1213,11 @@ function renderList(){
 }
 function card(x){
   const s=statsFor(x.id);
+  const apen=detaljerApne.has(x.id);
+  /* Merkelappene som er borte — «Mangler eier», «Mangler belegg», «Ikke
+     bekreftet» — var fasilitatorsignaler: de sier noe om REGISTERETS tilstand
+     og hører hjemme i admin.html eller på storskjermen. De tre som står igjen
+     handler om hypotesen, som er det deltakeren skal vurdere. */
   const head=h("div",{class:"card-head"},
     h("span",{class:"nr"},nr(x.nr)),
     /* Primær leveranse bærer fargen. Den sekundære vises dempet etter, fordi
@@ -951,13 +1232,13 @@ function card(x){
        den er ubesvarlig med kunnskapen i rommet. Det er en annen oppgave enn
        å vurdere, og krever at noen henter inn kunnskap utenfra. */
     s.ingenVet?h("span",{class:"badge w",title:"Ingen som har svart, hadde grunnlag for å vurdere. Kunnskapen må hentes utenfra."},"Ingen kan svare"):null,
-    s.first&&!x.eier?h("span",{class:"badge w"},"Mangler eier"):null,
-    x.status==="avkreftet"?h("span",{class:"badge w"},"Avkreftet"):null,
-    erAvklart(x)&&!x.status_notat?h("span",{class:"badge w",title:"Statusen ble satt før belegg ble påkrevd. Sett den på nytt for å dokumentere hva som avgjorde det."},"Mangler belegg"):null,
-    utkast[x.id]?h("span",{class:"badge w"},"Ikke bekreftet"):null,
     h("span",{class:"spacer"}),
     ferdigVurdert(x)?h("span",{class:"mine"},"Vurdert"):null,
-    h("select",{class:"status","aria-label":"Status","data-fk":`s:${x.id}`,
+    h("button",{class:"linkbtn",type:"button","aria-expanded":String(apen),
+      onclick:()=>{ apen?detaljerApne.delete(x.id):detaljerApne.add(x.id); renderList(); }},
+      apen?"Skjul detaljer":"Detaljer"));
+
+  const statusValg = h("select",{class:"status","aria-label":"Status","data-fk":`s:${x.id}`,
       onchange:e=>{
         const ny=e.target.value;
         if(ny===(x.status||"ny")) return;
@@ -968,7 +1249,7 @@ function card(x){
           const f=$("st-notat"); if(f){ f.focus(); }
         } else save(x.id,{p_status:ny,p_status_notat:""});
       }},
-      Object.entries(STATUS).map(([k,v])=>h("option",{value:k,selected:(x.status||"ny")===k},v))));
+      Object.entries(STATUS).map(([k,v])=>h("option",{value:k,selected:(x.status||"ny")===k},v)));
 
   /* Skjemaet ligger utenfor redigeringsmodus: å avklare en hypotese er en annen
      handling enn å omformulere den, og skal ikke kreve at man går inn i
@@ -1022,12 +1303,25 @@ function card(x){
       h("p",{class:"claim"},h("span",{class:"pre"},"Vi tror at "),x.tekst||""),
       x.kriterium?h("p",{class:"crit"},h("span",{class:"pre"},"Vi vet det når "),x.kriterium)
                  :h("p",{class:"crit empty"},"Mangler kriterium for når vi vet det."),
-      meta.length?h("div",{class:"meta"},meta):null,
+      /* Metalinja og statusnedtrekket ligger her, bak «Detaljer», fordi de
+         leses når noen skal gjøre noe med hypotesen — ikke når de vurderer
+         den. Avkreftet-markeringen følger med hit: den er en status. */
+      apen?h("div",{class:"detaljer"},
+        meta.length?h("div",{class:"meta"},meta):h("p",{class:"help"},"Ingen eier, frist eller kilde satt."),
+        h("div",{class:"actions"}, h("span",{class:"who"},"Status:"), statusValg,
+          erAvklart(x)&&!x.status_notat
+            ? h("span",{class:"badge w",title:"Statusen ble satt før belegg ble påkrevd. Sett den på nytt for å dokumentere hva som avgjorde det."},"Mangler belegg")
+            : null)):null,
       h("div",{class:"rate"},
-        h("div",{class:"scale",title:"Hvor ille er det for anbefalingen hvis dette er feil? 1 = merkes ikke, 10 = konseptet faller"},
-          h("span",{class:"lbl"},"Kritisk"),seg(x.id,"k"),h("span",{class:"ends"},"1 merkes ikke → 10 faller")),
-        h("div",{class:"scale",title:"Hvor lite vet vi om dette i dag? 1 = godt dokumentert, 10 = rent gjetning"},
-          h("span",{class:"lbl"},"Usikker"),seg(x.id,"u"),h("span",{class:"ends"},"1 dokumentert → 10 gjetning")),
+        kanVurdereSelv()
+          ? [h("div",{class:"scale",title:"Hvor ille er det for anbefalingen hvis dette er feil? 1 = merkes ikke, 10 = konseptet faller"},
+              h("span",{class:"lbl"},"Kritisk"),seg(x.id,"k"),h("span",{class:"ends"},"1 merkes ikke → 10 faller")),
+             h("div",{class:"scale",title:"Hvor lite vet vi om dette i dag? 1 = godt dokumentert, 10 = rent gjetning"},
+              h("span",{class:"lbl"},"Usikker"),seg(x.id,"u"),h("span",{class:"ends"},"1 dokumentert → 10 gjetning"))]
+          /* Steg 2 er låst gjennom steg 3 (§8): gruppa trenger et stabilt
+             utgangspunkt. Sperren ligger i rate_hypothesis — skalaene her
+             tegnes bare ikke, så ingen trykker seg til en feilmelding. */
+          : h("p",{class:"help"},minVurderingTekst(x)),
         visTall(x)
           ? h("span",{class:"avg"+(bump?" bump":"")},"Snitt ",h("b",{},fmt(s.k))," / ",h("b",{},fmt(s.u))," · ",s.n," ",s.n===1?"vurdering":"vurderinger")
           : h("span",{class:"avg skjult",title:visning==="lukket"
@@ -1047,6 +1341,307 @@ function card(x){
   return h("article",{class:"card"+(selected===x.id?" sel":"")+(s.first?" first":""),id:"c-"+x.id},head,statusForm,...body);
 }
 const avgKey = s => `${s.k==null?"":s.k.toFixed(2)}|${s.u==null?"":s.u.toFixed(2)}|${s.n}|${s.vetIkke}`;
+
+/* ---------- lesemodus ---------- */
+/* Én hypotese om gangen. Borte er alle merkelappene, statusnedtrekket, eier,
+   frist, kilde, belegg, snitt, sammendraget, matrisen, filtrene og søkefeltet.
+   Lesemodus er ikke komfort: tjue minutter på seksten hypoteser er 75 sekunder
+   hver, og et kort med førti elementer bruker halvparten av dem på å finne
+   påstanden. */
+function lesListe(){
+  if(oppgave==="gruppe") return utvalget();
+  return hyps.length ? visible() : [];
+}
+function klemLesIdx(){
+  const n=lesListe().length;
+  lesIdx = n ? klem(lesIdx, 0, n-1) : 0;
+}
+function lesBla(d){
+  const n=lesListe().length; if(!n) return;
+  lesIdx=klem(lesIdx+d, 0, n-1);
+  /* Bare leseflaten tegnes på nytt. Hele render() ville kastet matrisen og
+     sammendraget etter hvert tastetrykk, og det merkes som treghet. */
+  renderLeseflate();
+}
+function lesNav(n){
+  return h("div",{class:"bla"},
+    h("button",{type:"button",disabled:lesIdx<=0,onclick:()=>lesBla(-1)},"← Forrige"),
+    h("span",{class:"hint"},"Bruk piltastene"),
+    h("button",{type:"button",disabled:lesIdx>=n-1,onclick:()=>lesBla(1)},"Neste →"));
+}
+function lesHode(x, i, n, under){
+  return h("div",{class:"hode"},
+    h("div",{class:"id"},nr(x.nr)," · ",levKort(x.leveranse)," ",levLabel(x.leveranse)),
+    h("div",{class:"av"}, under || `${i+1} av ${n}`));
+}
+function lesBrodtekst(x){
+  return [h("p",{class:"pastand"},h("span",{class:"pre"},"Vi tror at "),x.tekst||""),
+          x.kriterium?h("p",{class:"nar"},h("span",{class:"pre"},"Vi vet det når "),x.kriterium):null];
+}
+function renderLesemodus(){
+  const list=lesListe();
+  if(!list.length) return h("div",{class:"les"}, emptyState());
+  const x=list[lesIdx];
+  return h("div",{class:"les"},
+    lesHode(x, lesIdx, list.length),
+    ...lesBrodtekst(x),
+    /* Skalaene blir stående. Å lese og vurdere i samme bevegelse er den
+       naturlige flyten, og uten dem blir lesemodus en blindvei folk må ut av
+       igjen for å gjøre noe. Gruppens tall vises ikke her: samme
+       ankringsregel som ellers. */
+    h("div",{class:"rate"},
+      kanVurdereSelv()
+        ? [h("div",{class:"scale"},h("span",{class:"lbl"},"Kritisk"),seg(x.id,"k"),
+             h("span",{class:"ends"},"1 merkes ikke → 10 faller")),
+           h("div",{class:"scale"},h("span",{class:"lbl"},"Usikker"),seg(x.id,"u"),
+             h("span",{class:"ends"},"1 dokumentert → 10 gjetning"))]
+        : h("p",{class:"help"},minVurderingTekst(x))),
+    lesNav(list.length));
+}
+
+/* ---------- steg 3: gruppeforslag ---------- */
+/* Oppgaven er ikke «bli enige om et tall», den er «lag et forslag alle kan
+   leve med, og skriv hvilke hensyn det forsøker å ivareta». Forskjellen er
+   ikke kosmetisk: målet blir integrering av hensyn, ikke seier eller
+   kapitulasjon. */
+function sprikLinje(verdier, farge){
+  const W=320, H=26, L=16, R=W-16;
+  const sv=s_("svg",{class:"sprik",viewBox:`0 0 ${W} ${H}`,"aria-hidden":"true",preserveAspectRatio:"none"});
+  sv.append(s_("line",{x1:L,y1:H/2,x2:R,y2:H/2,stroke:"var(--line)","stroke-width":"2"}));
+  sv.append(s_("line",{x1:(L+R)/2,y1:4,x2:(L+R)/2,y2:H-4,stroke:"var(--muted)",
+    "stroke-width":"1","stroke-dasharray":"3 3"}));
+  for(const v of verdier){
+    const cx=L+(v-1)/(SKALA-1)*(R-L);
+    sv.append(s_("circle",{cx,cy:H/2,r:"5",fill:farge,"fill-opacity":".55",
+      stroke:"var(--surface)","stroke-width":"1.5"}));
+  }
+  return sv;
+}
+function gruppeSkala(x, dim, navn, ender){
+  const verdier=medlemsVerdier(x.id,dim);
+  const r=minGruppeRad(x.id);
+  const cur=r && harSvart(r[dim]) ? r[dim] : null;
+  return h("div",{class:"field"},
+    h("label",{},navn," ",h("span",{class:"opt"},
+      verdier.length ? `· dere fem i steg 2: ${verdier.join(", ")}` : "· ingen i gruppen rakk denne")),
+    verdier.length ? sprikLinje(verdier, lcolor(x.leveranse)) : null,
+    erLeder()
+      ? h("div",{class:"scale"}, gruppeSeg(x.id, dim, cur, navn), h("span",{class:"ends"},ender))
+      : h("p",{class:"gr-les"},"Gruppens forslag: ",
+          h("b",{}, cur===null ? "ikke satt" : erVetIkke(cur) ? "vet ikke" : String(cur))));
+}
+/* Samme form som den individuelle skalaen, men den skriver til gruppas rad.
+   Knappene tegnes bare for lederen — sperren ligger uansett i RPC-en, så det
+   som mangler her er lesbarhet og ikke sikkerhet. */
+function gruppeSeg(id, dim, cur, navn){
+  return h("div",{class:"seg",role:"group"},
+    TRINN.map(n=>h("button",{type:"button","aria-pressed":String(cur===n),
+      "data-fk":`g:${id}:${dim}:${n}`, "aria-label":`${navn} ${n} av ${SKALA}`,
+      onclick:()=>setGruppeRate(id,dim,cur===n?null:n)}, n)),
+    h("button",{type:"button",class:"vi","aria-pressed":String(erVetIkke(cur)),
+      "data-fk":`g:${id}:${dim}:vi`, "aria-label":`${navn}: vet ikke`,
+      title:"At fem personer sammen ikke vet, er et sterkere signal enn at én ikke gjør det.",
+      onclick:()=>setGruppeRate(id,dim,erVetIkke(cur)?null:VET_IKKE)},"Vet ikke"));
+}
+/* Feltet gjenbrukes så lenge det er skittent. Bygges det på nytt hvert fjerde
+   sekund, mister det ikke bare fokus, men teksten som ikke er sendt ennå. */
+let hensynEl=null;
+function hensynFelt(id, verdi){
+  if(hensynEl && hensynEl.dataset.hid===id && hensynUtkast[id]!==undefined) return hensynEl;
+  const el=h("textarea",{maxlength:"500","data-fk":`h:${id}`,"data-hid":id,
+    placeholder:"Hvilke hensyn forsøker forslaget å ivareta?",
+    oninput:e=>setHensyn(id, e.target.value)});
+  el.value = hensynUtkast[id] !== undefined ? hensynUtkast[id] : (verdi||"");
+  hensynEl=el; return el;
+}
+function renderGruppe(){
+  if(!minGruppe) return h("div",{class:"les"},
+    h("div",{class:"empty-state"},
+      h("h3",{},"Du er ikke satt i en gruppe ennå"),
+      h("p",{class:"help"},"Si fra til fasilitator, så blir du satt inn. "+
+        "Gruppene ble delt ut da steg 2 ble lukket."),
+      grupper.length?h("p",{class:"help"},"Gruppene er: "+
+        grupper.map(g=>g.label+(g.sted?" ("+g.sted+")":"")).join(", ")):null));
+
+  const list=utvalget();
+  if(!list.length) return h("div",{class:"les"},
+    h("div",{class:"empty-state"},
+      h("h3",{},"Utvalget er tomt"),
+      h("p",{class:"help"},"Fasilitator har ikke frosset noe utvalg til gruppearbeidet ennå.")));
+
+  const x=list[lesIdx];
+  const r=minGruppeRad(x.id);
+  const f=gruppeFramdrift.find(q=>q.g===minGruppe.slug);
+  const hvorfor=hensynKreves(x.id);
+  return h("div",{class:"les"},
+    lesHode(x, lesIdx, list.length,
+      `${minGruppe.label} · ${lesIdx+1} av ${list.length}`),
+    /* Forskjellen mellom lederen og de fire andre må være synlig og forklart.
+       Et grensesnitt der kontrollene har forsvunnet uten forklaring leses som
+       en feil, og da brukes to av tjue minutter på feilsøking. */
+    h("div",{class:"gr-rolle"},
+      erLeder()
+        ? [h("b",{},"Du fører for gruppen."),
+           "Du skriver, gruppen bestemmer. Si tallet høyt før du setter det."]
+        : [h("b",{}, (minGruppe.leder_navn||"Gruppelederen")+" fører for gruppen."),
+           "Dere ser det samme, men bare én skriver — da kan ikke to dra i hver sin skala uten at noen merker det."],
+      minGruppe.sted?h("span",{},"· "+minGruppe.sted):null,
+      minGruppe.frist_tekst?h("span",{},"· "+minGruppe.frist_tekst):null,
+      f?h("span",{},`· ${f.n} av ${f.av} ført`):null),
+    h("p",{class:"help"},"Lag et forslag alle i gruppen kan leve med."),
+    ...lesBrodtekst(x),
+    gruppeSkala(x,"k","Kritisk","1 merkes ikke → 10 faller"),
+    gruppeSkala(x,"u","Usikker","1 dokumentert → 10 gjetning"),
+    /* Hensyn bes det om bare i de to tilfellene. Ble gruppa enig med én gang
+       og la hypotesen lavt, er begrunnelsen uten verdi og koster bare tid. */
+    hvorfor || (r && r.hensyn)
+      ? h("div",{class:"gr-hensyn"},
+          h("label",{},"Hensyn"),
+          erLeder() ? hensynFelt(x.id, r&&r.hensyn)
+                    : h("p",{class:"gr-les"},(r&&r.hensyn)||"Ikke skrevet ennå."),
+          hvorfor?h("p",{class:"hvorfor"},"Skriv hensyn her fordi ",hvorfor,"."):null)
+      : null,
+    r&&r.av ? h("p",{class:"gr-sist"},"Sist endret av ",r.av,
+                 r.tid?", "+klokke(r.tid):"") : null,
+    lesNav(list.length));
+}
+
+/* ---------- steg 5: plenum ---------- */
+/* Agendaen er hypotesene med gruppesprik — resten er avgjort uten at noen
+   trengte å si et ord. Sortert med spriket øverst og deretter kritikalitet:
+   ti minutter rekker tre–fire saker, og da avgjør sorteringen hvilke. */
+function plenumAgenda(){
+  return hyps.slice()
+    .filter(x=>x.gruppesprik || x.plenum_utfall)
+    .sort((a,b)=>(b.gruppesprik?1:0)-(a.gruppesprik?1:0)
+               || (a.plenum_utfall?1:0)-(b.plenum_utfall?1:0)
+               || (b.endelig_k||0)-(a.endelig_k||0) || a.nr-b.nr);
+}
+const UTFALL = {justert:"Justert", staar:"Rommet lever med spriket", eskalert:"Eskalert"};
+function gruppeForslag(id){
+  const rader=(gruppeRates[id]||[]).slice()
+    .sort((a,b)=>String(a.g).localeCompare(String(b.g),"no"));
+  if(!rader.length) return null;
+  const navn=s=>{const g=grupper.find(q=>q.slug===s); return g?g.label:String(s).toUpperCase();};
+  return h("div",{class:"gsprik"}, rader.map(r=>h("span",{title:r.hensyn||null},
+    navn(r.g),": ",h("b",{}, erTall(r.k)?r.k:"?"," / ",erTall(r.u)?r.u:"?"),
+    r.hensyn?" ✎":"")));
+}
+function hypLinje(x, ekstra){
+  return h("li",{},
+    h("span",{class:"nr"},nr(x.nr)),
+    h("span",{class:"pre"},"Vi tror at "), x.tekst||"",
+    ekstra||null);
+}
+function renderPlenum(){
+  const agenda=plenumAgenda();
+  const igjen=agenda.filter(x=>!x.plenum_utfall);
+  const ferdig=agenda.filter(x=>x.plenum_utfall);
+  return h("div",{},
+    h("div",{class:"bunke maa"},
+      h("h3",{},"Gjenstår ",h("span",{class:"c"},igjen.length)),
+      h("p",{class:"ingress"},"Gruppene havnet i ulikt felt. Her har rommet et reelt uavklart premiss, ikke bare støy."),
+      igjen.length
+        ? h("ol",{}, igjen.map(x=>hypLinje(x, gruppeForslag(x.id))))
+        : h("p",{class:"tom"},"Ingenting gjenstår. Gruppene landet likt, eller alt er kvittert ut.")),
+    ferdig.length ? h("div",{class:"bunke"},
+      h("h3",{},"Behandlet ",h("span",{class:"c"},ferdig.length)),
+      /* «Rommet er delt om H-14, og vi anbefaler likevel X» er en setning
+         styringsgruppen kan handle på. Derfor står utfallet, ikke bare at
+         saken er kvittert ut. */
+      h("ol",{}, ferdig.map(x=>hypLinje(x,
+        h("span",{class:"gsprik"},
+          h("span",{},UTFALL[x.plenum_utfall]||x.plenum_utfall),
+          x.plenum_notat?h("span",{},x.plenum_notat):null))))) : null,
+    h("p",{class:"help"},"Fasilitator kvitterer ut sakene. Matrisen til høyre viser hvor hver gruppe la dem."));
+}
+
+/* ---------- steg 6: oppgavelista ---------- */
+/* Ingvils ord fra agendaen, ikke matrisens: rommet skal ikke bruke fem
+   minutter på å oversette mellom tredelingen og 2×2-en. «Kritisk + avklart» er
+   kategorien tredelingen mangler, og den presses ikke inn i «skal ikke». */
+function renderOppgaver(){
+  if(!oppgaveliste) return h("div",{class:"les"},
+    h("div",{class:"empty-state"},
+      h("h3",{},"Oppgavelista er ikke åpnet ennå"),
+      h("p",{class:"help"},"Den er konklusjonen, og den bygges av det rommet gjør nå. "+
+        "Fasilitator åpner den når plenum er ferdig.")));
+
+  const byId=new Map(hyps.map(x=>[x.id,x]));
+  const velg=k=>(oppgaveliste[k]||[]).map(id=>byId.get(id)).filter(Boolean);
+  const maa=velg("maa"), ingen=velg("ingen_svar"), esk=velg("eskalert"), prem=velg("premiss");
+  const brukt=new Set([...maa,...ingen,...esk,...prem].map(x=>x.id));
+  /* «Bør» og «skal ikke» utledes her og ikke i databasen: de er ikke oppgaver,
+     bare restene av tredelingen — og de må likevel vises, fordi de er et svar
+     og ikke en utelatelse. */
+  const rest=hyps.filter(x=>!brukt.has(x.id) && x.endelig_k!=null && x.endelig_u!=null);
+  const bor=rest.filter(x=>x.endelig_u>MIDT).sort((a,b)=>a.nr-b.nr);
+  const ikke=rest.filter(x=>x.endelig_u<=MIDT).sort((a,b)=>a.nr-b.nr);
+
+  const tall=x=>h("span",{class:"gsprik"},
+    h("span",{},"Kritisk ",h("b",{},x.endelig_k??"–")," · Usikker ",h("b",{},x.endelig_u??"–")));
+  const bunke=(cls,tittel,ingress,liste,tom,ekstra)=>h("div",{class:"bunke"+(cls?" "+cls:"")},
+    h("h3",{},tittel," ",h("span",{class:"c"},liste.length)),
+    h("p",{class:"ingress"},ingress),
+    liste.length ? h("ol",{}, liste.map(x=>hypLinje(x, ekstra?ekstra(x):tall(x))))
+                 : h("p",{class:"tom"},tom));
+
+  return h("div",{},
+    oppgaveliste.ubehandlet
+      ? h("div",{class:"banner",role:"note"},
+          h("span",{},`Oppgavelista er produsert uten at ${oppgaveliste.ubehandlet} `+
+            "saker er behandlet i plenum. Det står også i eksporten."))
+      : null,
+    bunke("maa","Må leveres",
+      "Kritisk og usikker samtidig. Dette er forprosjektets jobb, og hver linje trenger eier og frist.",
+      maa,"Ingen. Det er et funn i seg selv.",
+      x=>[tall(x), x.eier?h("span",{class:"gsprik"},h("span",{},"Eier: ",eierNavn(x.eier))):null]),
+    bunke("varsel","Ingen kan svare",
+      "Ingen tallsvar — bare «vet ikke». En frist hjelper ikke når ingen vet hvor svaret finnes; noen må hente kunnskapen utenfra.",
+      ingen,"Alle hypotesene har et tall. Det er det beste utfallet her.",
+      ()=>null),
+    bunke("","Eskalert",
+      "Går til styringsgruppen som et spørsmål, ikke som en oppgave.",
+      esk,"Ingen saker ble eskalert.",
+      x=>x.plenum_notat?h("span",{class:"gsprik"},h("span",{},x.plenum_notat)):tall(x)),
+    bunke("","Premiss",
+      "Kritisk, men avklart. Skrives ned som forutsetning, utredes ikke. Dette er kategorien tredelingen mangler, og den mest verdifulle for styringsgruppen.",
+      prem,"Ingen premisser er fastslått."),
+    bunke("","Bør",
+      "Fint å vite, men bærer ikke beslutningen.", bor,"Ingen."),
+    bunke("","Skal ikke",
+      "Verken kritisk eller usikkert. Nevnes ikke i anbefalingen.", ikke,"Ingen."));
+}
+
+/* Leseflaten er den venstre kolonnen i alt som ikke er listevisning. Den
+   tegnes for seg, slik at det å bla ikke river opp matrisen og sammendraget. */
+function renderLeseflate(){
+  klemLesIdx();
+  const v=visningNaa();
+  const bygg = v==="gruppe"   ? renderGruppe
+             : v==="plenum"   ? renderPlenum
+             : v==="oppgaver" ? renderOppgaver
+             : renderLesemodus;
+  const el=$("les");
+  const fk=document.activeElement&&document.activeElement.dataset?document.activeElement.dataset.fk:null;
+  el.replaceChildren(bygg());
+  if(fk){ const back=el.querySelector(`[data-fk="${CSS.escape(fk)}"]`); if(back) back.focus(); }
+}
+
+/* Lytteren står på document og ikke på kortet, av samme grunn som mxDrag()
+   lytter på #chart: kortet byttes ut ved hvert poll. Men den må sjekke
+   event.target — skalaene er radiogrupper som bruker piltastene selv, og en
+   lytter som stjeler dem gjør vurdering med tastatur umulig. */
+document.addEventListener("keydown",e=>{
+  if(e.key!=="ArrowLeft" && e.key!=="ArrowRight") return;
+  if(!session || $("les").hidden) return;
+  if(document.body.classList.contains("scene")) return;   // der blar piltastene mellom scenene
+  if(e.metaKey||e.ctrlKey||e.altKey) return;
+  const t=e.target;
+  if(t && t.closest && (t.closest(".seg") || t.closest("input,textarea,select"))) return;
+  e.preventDefault();
+  lesBla(e.key==="ArrowRight" ? 1 : -1);
+});
 
 /* ---------- matrise ---------- */
 const NS="http://www.w3.org/2000/svg";
@@ -1081,6 +1676,10 @@ function mxTegnSnart(){
    hele hypotesen fram. Samme inngang begge veier: punktet vet ikke hvilken
    visning det står i, det melder bare fra at markøren er over. */
 let hoverEl=null, hoverId=null, hoverPin=false;
+/* I plenum står det ett punkt per gruppe per hypotese, så hypotese-IDen alene
+   er ikke unik lenger. Alt som peker på «det punktet jeg står på» må bruke
+   nøkkelen, ellers finner opptegningen feil punkt igjen. */
+const pKey = p => p.nokkel || p.x.id;
 function skjulHover(){
   clearTimeout(hoverT); hoverT=null;
   if(hoverEl){ hoverEl.remove(); hoverEl=null; }
@@ -1101,7 +1700,7 @@ function visHover(p, g, pin){
   clearTimeout(hoverT); hoverT=null;                      // avbryt en lukking på vei
   if(dragId) return;                                      // under draging flytter punktet seg
   if(hoverPin && !pin) return;                            // festet kort eier flaten
-  if(hoverId===p.x.id && hoverEl && !pin) return;         // står allerede oppe
+  if(hoverId===pKey(p) && hoverEl && !pin) return;        // står allerede oppe
   const storskjerm = document.body.classList.contains("scene");
 
   /* Glir du fra ett punkt til et nabopunkt, byttes BARE innholdet. Før ble
@@ -1112,12 +1711,12 @@ function visHover(p, g, pin){
     if(pin) hoverPin=true;
     hoverEl.replaceChildren(...hoverKort(p,hoverPin).childNodes);
     hoverEl.classList.toggle("festet", hoverPin);
-    hoverId=p.x.id;
+    hoverId=pKey(p);
     return;
   }
 
   if(hoverEl){ hoverEl.remove(); hoverEl=null; }
-  hoverId=p.x.id;
+  hoverId=pKey(p);
   if(pin) hoverPin=true;
   hoverEl = storskjerm ? hoverKort(p,hoverPin) : hoverTip(p,g);
   document.body.append(hoverEl);
@@ -1162,10 +1761,71 @@ window.addEventListener("scroll", skjulHover, true);
    stopper boblingen, så den treffer ikke her. */
 document.addEventListener("click",()=>{ if(hoverPin) skjulHover(); });
 
+/* Høyre kolonne byttes ut per steg, akkurat som venstre. «Alles snitt / min
+   vurdering» er bare et valg mens folk stemmer individuelt — fra steg 3 er det
+   gruppas, så alles, så det endelige tallet som skal stå der. */
+function mxKilde(){
+  if(oppgave==="gruppe")   return "gruppe";
+  if(oppgave==="plenum")   return "grupper";
+  if(oppgave==="oppgaver") return "endelig";
+  return mxMode==="min" ? "min" : "snitt";
+}
+function mxPunkter(kilde){
+  if(kilde==="min") return hyps.map(x=>{
+    const v=minVerdi(x.id); if(!kanPlasseres(v)) return null;
+    /* Avklart er ikke lenger din mening, så punktet låses og legges til
+       venstre også her. Ellers ville samme hypotese stått to ulike steder i de
+       to visningene. */
+    const av=erAvklart(x);
+    return {x,k:v.k,u:av?1:v.u,utk:!av&&!!utkast[x.id],split:false,laast:av,vetIkke:0,andelVet:0};
+  }).filter(Boolean);
+
+  if(kilde==="gruppe") return utvalget().map(x=>{
+    const r=minGruppeRad(x.id);
+    if(!r || !erTall(r.k) || !erTall(r.u)) return null;
+    return {x,k:r.k,u:r.u,utk:false,split:false,vetIkke:0,andelVet:0};
+  }).filter(Boolean);
+
+  /* Ett punkt per gruppe per hypotese. Der de spriker, har rommet et reelt
+     uavklart premiss og ikke bare støy — det er plenums åpningsbilde. */
+  if(kilde==="grupper"){
+    const ut=[];
+    for(const x of hyps) for(const r of gruppeRates[x.id]||[]){
+      if(!erTall(r.k)||!erTall(r.u)) continue;
+      const g=grupper.find(q=>q.slug===r.g);
+      ut.push({x,k:r.k,u:r.u,utk:false,split:!!x.gruppesprik,vetIkke:0,andelVet:0,
+               nokkel:x.id+"-"+r.g,
+               merke:(g?g.label:String(r.g)).slice(-1).toUpperCase()});
+    }
+    return ut;
+  }
+
+  if(kilde==="endelig") return hyps.map(x=>
+    x.endelig_k==null||x.endelig_u==null ? null
+      : {x,k:x.endelig_k,u:x.endelig_u,utk:false,split:!!x.gruppesprik,vetIkke:0,andelVet:0}
+  ).filter(Boolean);
+
+  return hyps.map(x=>{
+    /* Uten denne ville «lukket» plottet dine egne tall som om de var gruppens,
+       og «etter egen stemme» ville røpet posisjonen til hypoteser du ennå ikke
+       har tatt stilling til. */
+    if(!visTall(x)) return null;
+    const st=statsFor(x.id);
+    if(st.k==null||st.u==null) return null;
+    /* Ringen vokser med hvor stor del av rommet som ikke kunne svare. Punktet
+       står fortsatt på tallsnittet — det er riktig plassering for dem som
+       faktisk hadde grunnlag — men ringen sier hvor tynt snittet er. */
+    const svart=st.n+st.vetIkke;
+    return {x,k:st.k,u:st.u,utk:false,split:st.split,
+            vetIkke:st.vetIkke, andelVet: svart?st.vetIkke/svart:0};
+  }).filter(Boolean);
+}
+
 function renderMatrix(){
   const svg=$("chart"); svg.replaceChildren();
   const {L,T,W,H}=MX, X=mxX, Y=mxY;
-  const min = mxMode==="min";
+  const kilde=mxKilde();
+  const min = kilde==="min";
   const midX=X(MIDT), midY=Y(MIDT);
 
   svg.append(s_("rect",{x:midX,y:T,width:L+W-midX,height:midY-T,fill:"var(--accent-soft)"}));
@@ -1198,30 +1858,7 @@ function renderMatrix(){
   svg.append(s_("text",{x:L+W/2,y:T+H+39,"text-anchor":"middle","font-size":"12","font-weight":"600",fill:"var(--ink)"},"Usikkerhet →"));
   svg.append(s_("text",{x:16,y:T+H/2,"text-anchor":"middle","font-size":"12","font-weight":"600",fill:"var(--ink)",transform:`rotate(-90 16 ${T+H/2})`},"Kritikalitet →"));
 
-  const pts = min
-    ? hyps.map(x=>{
-        const v=minVerdi(x.id); if(!kanPlasseres(v)) return null;
-        /* Avklart er ikke lenger din mening, så punktet låses og legges til
-           venstre også her. Ellers ville samme hypotese stått to ulike steder
-           i de to visningene. */
-        const av=erAvklart(x);
-        return {x,k:v.k,u:av?1:v.u,utk:!av&&!!utkast[x.id],split:false,laast:av,vetIkke:0,andelVet:0};
-      }).filter(Boolean)
-    : hyps.map(x=>{
-        /* Uten denne ville «lukket» plottet dine egne tall som om de var
-           gruppens, og «etter egen stemme» ville røpet posisjonen til
-           hypoteser du ennå ikke har tatt stilling til. */
-        if(!visTall(x)) return null;
-        const st=statsFor(x.id);
-        if(st.k==null||st.u==null) return null;
-        /* Ringen vokser med hvor stor del av rommet som ikke kunne svare.
-           Punktet står fortsatt på tallsnittet — det er riktig plassering for
-           dem som faktisk hadde grunnlag — men ringen sier hvor tynt snittet
-           er. */
-        const svart=st.n+st.vetIkke;
-        return {x,k:st.k,u:st.u,utk:false,split:st.split,
-                vetIkke:st.vetIkke, andelVet: svart?st.vetIkke/svart:0};
-      }).filter(Boolean);
+  const pts = mxPunkter(kilde);
   pts.sort((a,b)=>a.x.nr-b.x.nr);
 
   const placed=[];
@@ -1234,8 +1871,10 @@ function renderMatrix(){
     const sel=selected===p.x.id;
     const avkreftet = p.x.status==="avkreftet";
     const flyttbar = min && !p.laast;
-    const g=s_("g",{id:"pt-"+p.x.id, class:"pt"+(flyttbar?" flyttbar":""),tabindex:"0",role:"button",
-      "aria-label":`${nr(p.x.nr)}: ${p.x.tekst}. Kritisk ${p.k}, usikker ${p.u}.`
+    const key=pKey(p);
+    const g=s_("g",{id:"pt-"+key, class:"pt"+(flyttbar?" flyttbar":""),tabindex:"0",role:"button",
+      "aria-label":`${nr(p.x.nr)}: ${p.x.tekst}.`+(p.merke?` Gruppe ${p.merke}.`:"")
+        +` Kritisk ${p.k}, usikker ${p.u}.`
         +(p.vetIkke?` ${p.vetIkke} vet ikke.`:"")
         +(avkreftet?" Avkreftet.":"")+(p.laast?" Avklart, kan ikke flyttes.":"")
         +(flyttbar?" Bruk piltastene for å flytte.":"")});
@@ -1257,6 +1896,10 @@ function renderMatrix(){
       "stroke-width":p.utk?"3":(sel?"3":"2"),
       "stroke-dasharray":p.utk?"4 2.5":null}));
     g.append(s_("text",{x:cx,y:cy+4,"text-anchor":"middle","font-size":"10.5","font-weight":"700",fill:"var(--surface)","font-family":"var(--f-mono)"},String(p.x.nr)));
+    /* Gruppebokstaven henger under punktet og ikke inni det: nummeret er
+       hypotesen, og den må fortsatt kunne leses først. */
+    if(p.merke) g.append(s_("text",{x:cx,y:cy+20,"text-anchor":"middle","font-size":"9",
+      "font-weight":"700",fill:"var(--muted)","font-family":"var(--f-mono)"},p.merke));
     if(p.split) g.append(s_("circle",{cx:cx+11,cy:cy-11,r:4.5,fill:"var(--warn)",stroke:"var(--surface)","stroke-width":"1.5"}));
 
     const velg=()=>{selected=p.x.id;render();};
@@ -1266,7 +1909,7 @@ function renderMatrix(){
       /* I storskjerm er det ingen detaljliste å velge seg inn i, så klikket
          brukes til å feste kortet i stedet. Klikk på samme punkt lukker. */
       if(document.body.classList.contains("scene")){
-        if(hoverPin && hoverId===p.x.id) skjulHover();
+        if(hoverPin && hoverId===key) skjulHover();
         else visHover(p,g,true);
         return;
       }
@@ -1305,7 +1948,7 @@ function renderMatrix(){
      ikke finnes lenger. Markøren står i ro og sender ingen ny pointerenter, så
      uten dette ville kortet blitt hengende til du beveger musen. */
   if(hoverId){
-    const p2=pts.find(q=>q.x.id===hoverId), g2=document.getElementById("pt-"+hoverId);
+    const p2=pts.find(q=>pKey(q)===hoverId), g2=document.getElementById("pt-"+hoverId);
     if(p2&&g2&&!dragId){ const pin=hoverPin; hoverId=null; hoverPin=false; visHover(p2,g2,pin); }
     else skjulHover();
   }
@@ -1314,23 +1957,44 @@ function renderMatrix(){
      Ellers ville «0 av 28 plassert» i lukket modus lest som at ingen har
      stemt, når sannheten er at tallene holdes tilbake. */
   const vurdertAlle = hyps.filter(x=>(antallVurdert(x.id)||0)>0).length;
-  $("mx-c").textContent = min
+  $("mx-c").textContent =
+      kilde==="gruppe"  ? `${pts.length} av ${utvalget().length} ført av gruppen`
+    : kilde==="grupper" ? `${pts.length} forslag fra ${grupper.length} grupper`
+    : kilde==="endelig" ? `${pts.length} av ${hyps.length} har et endelig tall`
+    : min
     ? `${pts.length} av ${hyps.length} plassert av deg`
     : visning==="apent"
       ? `${pts.length} av ${hyps.length} plassert`
       : visning==="lukket"
         ? `Resultatene er skjult · ${vurdertAlle} av ${hyps.length} er vurdert`
         : `${pts.length} av ${hyps.length} vist · tallene åpnes når du selv har vurdert`;
+  $("pane-tittel").textContent =
+      document.body.classList.contains("fund") ? "Dekning per leveranse"
+    : kilde==="gruppe"  ? "Din gruppes forslag"
+    : kilde==="grupper" ? "Alle gruppenes forslag"
+    : kilde==="endelig" ? "Endelig plassering"
+    : "Matrise";
 
   /* replaceChildren tar imot noder og strenger — en `null` blir til teksten
      «null» på skjermen. `h()` filtrerer bort falske barn, men her går det rett
      inn, så lista må renses først. */
   $("legend").replaceChildren(...[
     ...levSortert().map(d=>h("span",{title:d.label},h("span",{class:"dot",style:`background:${lcolor(d.slug)}`}),"L"+d.nr)),
-    min?null:h("span",{},h("span",{class:"dot",style:"background:var(--warn)"}),"Uenige"),
-    min?null:h("span",{},h("span",{class:"ring"}),"Noen vet ikke")].filter(Boolean));
+    min?null:h("span",{},h("span",{class:"dot",style:"background:var(--warn)"}),
+      kilde==="grupper"||kilde==="endelig"?"Gruppesprik":"Uenige"),
+    (min||kilde==="gruppe"||kilde==="grupper"||kilde==="endelig")
+      ?null:h("span",{},h("span",{class:"ring"}),"Noen vet ikke")].filter(Boolean));
 
   renderTray(min);
+  /* Fra steg 3 er det ikke lenger DIN plassering som mangler, og «ikke
+     plassert ennå» ville bedt om noe steget ikke handler om. */
+  if(kilde!=="min" && kilde!=="snitt"){
+    const mangler = kilde==="gruppe" ? utvalget().filter(x=>!mxPunkter("gruppe").some(p=>p.x.id===x.id)) : [];
+    $("unrated").textContent = mangler.length
+      ? `Gruppen har ikke ført: ${mangler.map(x=>nr(x.nr)).join(", ")}`
+      : "";
+    return;
+  }
   /* Tre tilstander, ikke to. «Ingen kan svare» er ikke en glemt vurdering, og
      å be om at den plasseres er feil oppfordring — da må noen hente kunnskap
      utenfra i stedet. */
@@ -1410,7 +2074,7 @@ async function bekreft(){
   svg.addEventListener("pointerup",slutt);
   svg.addEventListener("pointercancel",slutt);
   svg.addEventListener("click",e=>{
-    if(mxMode!=="min"||dragId) return;
+    if(mxKilde()!=="min"||dragId) return;
     if(Date.now()-sistDrag<250) return;
     if(e.target.closest(".pt")) return;
     if(!selected){ toast("Velg en hypotese først"); return; }
@@ -1626,14 +2290,57 @@ function delOpp(tekst, maks){
 }
 
 /* ---------- render ---------- */
+/* Hvert steg har sin venstre og sin høyre flate (§12). Den som ikke hører
+   hjemme i steget skjules helt i stedet for å krympes: en halv matrise ved
+   siden av en halv leseflate svarer ikke på noe. */
+function renderSteg(){
+  const v=visningNaa();
+  const ind=$("steg-ind");
+  const st=STEG[oppgave];
+  if(st){
+    ind.hidden=false;
+    /* replaceChildren tar imot noder og strenger — en `null` blir til teksten
+       «null» på skjermen. Lista må renses før den går inn. */
+    ind.replaceChildren(...[h("span",{},`Steg ${st.nr} · ${st.navn}`),
+      minGruppe && stegNr(oppgave)===3 ? h("span",{class:"g"},minGruppe.label) : null].filter(Boolean));
+  } else ind.hidden=true;
+
+  /* Fasilitator kan ikke tvinge visningen på deltakerne: folk leser i ulikt
+     tempo, og en tvungen felles markør gjør de raske utålmodige og de
+     grundige stresset. Men i plenum og oppgaver er det steget som er bildet. */
+  $("vis-valg").hidden=!velgerSynlig();
+  for(const b of document.querySelectorAll("#vis-valg .mode"))
+    b.setAttribute("aria-pressed", String(b.dataset.vis===vis));
+  /* Søk, sortering og filtre hører til listevisningen. I lesemodus er de
+     nettopp det som er fjernet. */
+  const liste = v==="liste";
+  $("q").hidden=!liste; $("sort").hidden=!liste; $("filters").hidden=!liste;
+  $("toolbar").hidden = !liste && !velgerSynlig();
+  $("list").hidden=!liste;
+  $("les").hidden=liste || v==="matrise";
+
+  const cols=$("cols");
+  /* §12: i `les` står det ingenting til høyre. Matrisen er et resultatbilde,
+     og steg 1 handler om å forstå teksten. */
+  cols.classList.toggle("bare-matrise", v==="matrise");
+  cols.classList.toggle("uten-matrise",
+    oppgave==="les" && v!=="matrise" && !document.body.classList.contains("scene"));
+  /* «Alles snitt / Min vurdering» er et valg mens folk stemmer individuelt.
+     Fra steg 3 er kilden gitt av steget, og en bryter som ikke bytter noe
+     lærer folk at verktøyet er i stykker. */
+  $("mx-modes").hidden = stegNr(oppgave)>=3;
+}
+
 function render(){
   if(!session) return;
+  renderSteg();
   renderSummary();
   renderFilters();
   renderMatrix();
   if(document.body.classList.contains("scene")) renderFundament();
   renderPending();
   renderDetail();
+  if(!$("les").hidden) renderLeseflate();
   if(editing && $("list").contains(document.activeElement)){ needsRender=true; return; }
   renderList();
   prevAvg={}; for(const x of hyps) prevAvg[x.id]=avgKey(statsFor(x.id));
@@ -1672,6 +2379,16 @@ async function refresh(){
     for(const t of b.tellinger||[]) tellinger[t.h]={n:t.n,vetIkke:t.vetIkke};
     deltakereTotalt=b.deltakere_totalt||0;
     deltakereVurdert=b.deltakere_vurdert||0;
+    const nyOppgave=b.oppgave||"individuell";
+    const nyGrupper=b.grupper||[];
+    const nyMinGruppe=b.min_gruppe||null;
+    const nyGruppeRates={};
+    for(const r of b.gruppe_ratings||[]) (nyGruppeRates[r.h] ||= []).push(r);
+    const nyFramdrift=b.gruppe_framdrift||[];
+    /* undefined når feltet ikke finnes i svaret (gammel database), null når
+       steget ikke er åpnet. Begge skal gi «ikke åpnet ennå», ikke en tom liste
+       som ser ut som en konklusjon. */
+    const nyOppgaveliste=b.oppgaver||null;
     $("til-backend").hidden=!erAdmin;
     /* Storskjermen er fasilitatorens verktøy, ikke deltakerens. Den som trykker
        den på sin egen PC mister kontrollene og lurer på hva som skjedde. */
@@ -1682,11 +2399,26 @@ async function refresh(){
     if(!bannerVarig) $("banner").hidden=true;
 
     /* Hopp over rendering når ingenting er endret. Ellers bygges hele lista på
-       nytt hvert fjerde sekund, med flimmer og tapt fokus som resultat. */
+       nytt hvert fjerde sekund, med flimmer og tapt fokus som resultat.
+       Alt som styrer hva skjermen viser må stå her — ellers tegnes et
+       stegbytte først ved neste faktiske endring i dataene. */
     const sig=JSON.stringify([nextHyps,b.leveranser,nextRates,b.tellinger,visning,
-                              deltakereTotalt,deltakereVurdert]);
+                              deltakereTotalt,deltakereVurdert,
+                              nyOppgave,nyGrupper,nyMinGruppe,
+                              b.gruppe_ratings,nyFramdrift,nyOppgaveliste]);
     if(sig===lastSig && !pendingRate.size) return;
     lastSig=sig;
+
+    /* Nytt steg: appen åpner i Les. Men bare hvis deltakeren ikke selv har
+       valgt noe ETTER stegbyttet — overstyrer vi hver gang, kastes folk
+       tilbake til lesemodus midt i arbeidet. */
+    if(!stegSett || nyOppgave!==oppgave){
+      stegSett=true;
+      lesIdx=0;
+      if(visSteg!==nyOppgave) vis="les";
+    }
+    oppgave=nyOppgave; grupper=nyGrupper; minGruppe=nyMinGruppe;
+    gruppeRates=nyGruppeRates; gruppeFramdrift=nyFramdrift; oppgaveliste=nyOppgaveliste;
 
     hyps=nextHyps; rates=nextRates;
     const mine={...(nextRates[session.pid]||{})};
@@ -1694,6 +2426,9 @@ async function refresh(){
     myRates=mine;
     if(selected&&!hyps.some(x=>x.id===selected)) selected=null;
     if(editing&&!nextHyps.some(x=>x.id===editing)) editing=null;
+    /* Arkiveres hypotesen du står på, skal du ikke havne på en tom skjerm —
+       samme mønster som `selected` og `editing`. */
+    klemLesIdx();
     render();
   }catch(e){
     if(e.code==="28000"){ handleErr(e); return; }
@@ -1736,8 +2471,52 @@ function setRate(id,dim,val){
   },350);
 }
 
-$("sort").addEventListener("change",e=>{ sort=e.target.value; render(); });
-let qT; $("q").addEventListener("input",e=>{ clearTimeout(qT); qT=setTimeout(()=>{ query=e.target.value.trim(); renderList(); },150); });
+/* §5: gruppas forslag skrives bare av lederen, og rate_group_hypothesis
+   håndhever det. Det fjerner samtidighetsproblemet i stedet for å løse det —
+   kunne alle fem skrive, ville to som drar på samme skala overskrive hverandre
+   uten at noen merker det, og gruppa diskutere videre ut fra et tall ingen
+   satte. Merk at det IKKE finnes noen p_forrige: den optimistiske låsen utgår
+   sammen med skriveretten. */
+const gruppeTimers={};
+function setGruppeRate(id,dim,val){
+  if(!minGruppe) return;
+  const r=minGruppeRad(id)||{g:minGruppe.slug,k:null,u:null,hensyn:""};
+  const ny={...r, [dim]: harSvart(val)?val:null};
+  /* Lagt inn lokalt med én gang, ellers står knappen utrykt i opptil fire
+     sekunder mens fem personer ser på den. */
+  gruppeRates={...gruppeRates,
+    [id]:[...(gruppeRates[id]||[]).filter(q=>q.g!==minGruppe.slug), ny]};
+  render();
+  clearTimeout(gruppeTimers[id]);
+  gruppeTimers[id]=setTimeout(async()=>{
+    /* p_hensyn = null betyr «rørte ikke feltet». Sendes tom streng her, ville
+       et tastetrykk på skalaen slettet hensynet gruppa nettopp skrev. */
+    try{ await rpc("rate_group_hypothesis",{p_id:id,p_k:ny.k,p_u:ny.u,p_hensyn:null}); skrivingOk(); }
+    catch(e){ handleErr(e); }
+    lastSig=null;
+  },350);
+}
+/* Lengre pause enn skalaen: dette er en setning som skrives, ikke et klikk.
+   Så lenge id-en står i hensynUtkast, hoppes feltet over i opptegningen. */
+const hensynTimers={};
+function setHensyn(id, tekst){
+  hensynUtkast[id]=tekst;
+  clearTimeout(hensynTimers[id]);
+  hensynTimers[id]=setTimeout(async()=>{
+    const r=minGruppeRad(id)||{};
+    try{
+      await rpc("rate_group_hypothesis",
+        {p_id:id, p_k:harSvart(r.k)?r.k:null, p_u:harSvart(r.u)?r.u:null, p_hensyn:tekst});
+      skrivingOk(); delete hensynUtkast[id]; lastSig=null;
+    }catch(e){ handleErr(e); }
+  },900);
+}
+
+$("vis-valg").addEventListener("click",e=>{
+  const b=e.target.closest("button[data-vis]"); if(!b) return;
+  settVisning(b.dataset.vis);
+});
+$("sort").addEventListener("change",e=>{ sort=e.target.value; render(); });let qT; $("q").addEventListener("input",e=>{ clearTimeout(qT); qT=setTimeout(()=>{ query=e.target.value.trim(); renderList(); },150); });
 
 /* ---------- innlogging ---------- */
 /* To steg: e-post, så kode. Kode og ikke magisk lenke, nettopp fordi folk
@@ -1930,6 +2709,8 @@ function logout(){
   if(session&&session.access_token) fetch(`${CFG.supabaseUrl}/auth/v1/logout`,{method:"POST",
     headers:{apikey:CFG.supabaseKey,Authorization:"Bearer "+session.access_token}}).catch(()=>{});
   store(false,null); session=null; hyps=[]; rates={}; myRates={}; loaded=false; lastSig=null;
+  grupper=[]; minGruppe=null; gruppeRates={}; gruppeFramdrift=[]; oppgaveliste=null;
+  stegSett=false; lesIdx=0; detaljerApne=new Set(); hensynUtkast={}; hensynEl=null;
   $("ws-name").textContent="Nordlys · forprosjekt";
   skjulBanner();
   /* Adressen fylles inn igjen etter utlogging. Den som logger ut er som regel

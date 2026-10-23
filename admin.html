@@ -109,14 +109,75 @@ button.liten{padding:4px 10px;font-size:13px}
   border-radius:var(--r);padding:26px;display:grid;gap:12px}
 .nektet h2{margin:0;font-size:21px}
 
+/* ---------- stegbryter ---------- */
+/* Knappene er like brede og står i rekkefølge, fordi trakten er ordnet. En
+   rutenettsrad leses som en vei framover; en flytende rad leses som et utvalg. */
+.steg{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin-bottom:12px}
+.steg button{display:grid;gap:3px;text-align:left;background:var(--bg);border:1px solid var(--line);
+  border-left:4px solid var(--line);border-radius:9px;padding:9px 11px;cursor:pointer;min-width:0}
+.steg button:hover{border-color:var(--accent)}
+.steg button.naa{border-color:var(--accent);border-left-color:var(--accent);background:var(--accent-soft)}
+.steg button.naa .s-navn{color:var(--ink)}
+.steg .s-navn{font-size:13.5px;font-weight:600;line-height:1.25}
+.steg .s-tall{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+/* Antallet utildelte skal oppdages FØR byttet, ikke etterpå. Derfor står det i
+   selve linja fasilitator uansett leser, ikke i en kvittering etter kallet. */
+.framdrift{display:flex;flex-wrap:wrap;gap:8px 16px;font-size:13px;color:var(--muted);
+  font-variant-numeric:tabular-nums;margin:0 0 12px}
+.framdrift b{color:var(--ink);font-weight:600}
+.framdrift .ad{color:var(--warn)}
+.bekreft{background:var(--warnbg);border:1px solid var(--warn);border-radius:9px;padding:12px 14px;margin-bottom:12px;display:grid;gap:8px}
+.bekreft h3{margin:0;font-size:14.5px;font-family:var(--f-body)}
+.bekreft ul{margin:0;padding-left:20px;font-size:13.5px;line-height:1.5}
+.bekreft .row{margin-top:2px}
+
+/* ---------- grupper ---------- */
+.gr-topp{display:flex;flex-wrap:wrap;gap:10px;align-items:end;margin-bottom:12px}
+/* Spennet står ved siden av lagreknappen og ikke bak en fane: det er den eneste
+   tilbakemeldingen fasilitator rekker å lese mens rommet venter. */
+.spenn{display:grid;gap:3px;font-size:13px;font-variant-numeric:tabular-nums;
+  background:var(--sunk);border-radius:9px;padding:10px 12px;margin:0 0 12px;min-width:0}
+.spenn .lin{display:flex;gap:10px;flex-wrap:wrap}
+.spenn .lin b{font-weight:600;min-width:9ch}
+.spenn .flagg{color:var(--warn);font-weight:600}
+.spenn .merk{color:var(--muted)}
+/* Tilfeldig fordeling er et sannsynlig utfall med kort steg 2, ikke et
+   særtilfelle — meldingen skal derfor se ut som et varsel og ikke en fotnote. */
+.varsel{background:var(--warnbg);color:var(--ink);border:1px solid var(--warn);border-radius:9px;
+  padding:11px 13px;margin:0 0 12px;font-size:13.5px;line-height:1.5}
+.gr-kort{border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:var(--r);
+  padding:11px 13px;margin-bottom:9px;display:grid;gap:9px;background:var(--surface)}
+.gr-medl{display:flex;flex-wrap:wrap;gap:6px;font-size:13px}
+.gr-medl span{background:var(--sunk);border-radius:999px;padding:2px 10px}
+.gr-medl span.leder{background:var(--accent-soft);color:var(--ink);font-weight:600}
+.dl-rad{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) 92px 150px;gap:9px;
+  align-items:center;padding:7px 0;border-bottom:1px solid var(--line);font-size:13.5px;min-width:0}
+.dl-rad:last-child{border-bottom:0}
+.dl-rad .navn{font-weight:600;overflow:hidden;text-overflow:ellipsis}
+.dl-rad .dom,.dl-rad .tall{color:var(--muted);font-size:12.5px;overflow:hidden;text-overflow:ellipsis}
+.dl-rad select{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:6px 8px;width:100%}
+
+/* ---------- plenum ---------- */
+.pl-forslag{display:flex;flex-wrap:wrap;gap:7px;font-size:12.5px;font-variant-numeric:tabular-nums}
+.pl-forslag span{background:var(--sunk);border-radius:8px;padding:3px 9px}
+.pl-just{display:grid;grid-template-columns:96px 96px minmax(0,1fr) auto;gap:9px;align-items:end}
+.kvitt{font-size:12.5px;color:var(--ok);font-weight:600}
+
 .banner{background:var(--warnbg);color:var(--warn);border:1px solid var(--warn);border-radius:8px;
   padding:9px 13px;margin:14px 0;font-size:13.5px;display:flex;align-items:center;gap:10px}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);
   padding:10px 16px;border-radius:8px;font-size:14px;z-index:20;max-width:calc(100% - 32px)}
 
+@media (max-width:980px){
+  .steg{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .dl-rad{grid-template-columns:minmax(0,1fr) 150px;row-gap:3px}
+  .dl-rad .dom,.dl-rad .tall{display:none}
+}
 @media (max-width:700px){
   header.top{position:static}
   .lev-felt{grid-template-columns:minmax(0,1fr)}
+  .steg{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .pl-just{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
 }
 </style>
 </head>
@@ -174,10 +235,63 @@ button.liten{padding:4px 10px;font-size:13px}
 
   <div id="app" hidden>
     <section class="seksjon">
+      <h2>Oppgave <span class="c" id="steg-c"></span></h2>
+      <p class="lede">Taktpinnen. Verktøyet flytter ikke seg selv — det viser bare om steget er
+        ferdig. Stegbyttet gjør arbeid i databasen, og hva det gjør står i bekreftelsen før
+        kallet sendes.</p>
+      <div class="framdrift" id="steg-framdrift"></div>
+      <div class="steg" id="steg-valg"></div>
+      <div id="steg-bekreft"></div>
+      <div class="row">
+        <div class="field" style="flex:0 0 190px">
+          <label for="s-maks">Hypoteser i gruppearbeidet</label>
+          <input id="s-maks" type="number" min="1" max="40" value="10" data-fk="s-maks">
+        </div>
+        <p class="help" style="flex:1 1 260px">Taket for utvalget som fryses når du åpner steg 3.
+          Tjue minutter gruppearbeid tåler omtrent ti.</p>
+      </div>
+    </section>
+
+    <section class="seksjon">
       <h2>Resultatvisning</h2>
       <p class="lede">Styrer hva deltakerne ser mens de vurderer. Sperren ligger i databasen,
         ikke i nettleseren — tallene sendes ikke ut før modusen tillater det.</p>
       <div id="vis-valg"></div>
+    </section>
+
+    <section class="seksjon">
+      <h2>Grupper <span class="c" id="gr-c"></span></h2>
+      <p class="lede">Bland folk som er uenige. Forslaget skriver ingenting i databasen før du
+        lagrer — og det lever bare i denne fanen, så en oppfriskning kaster det. Å trekke på
+        nytt tar et sekund.</p>
+      <div class="gr-topp">
+        <div class="field" style="flex:0 0 110px">
+          <label for="g-antall">Grupper</label>
+          <input id="g-antall" type="number" min="1" max="10" value="4" data-fk="g-antall">
+        </div>
+        <label class="hake"><input id="g-admin" type="checkbox" data-fk="g-admin"> Ta med administratorer</label>
+        <button class="primary" id="g-foresla" type="button">Foreslå grupper</button>
+        <button class="ghost" id="g-paanytt" type="button" hidden>Foreslå på nytt</button>
+        <span class="spacer"></span>
+        <button class="primary" id="g-lagre" type="button">Lagre inndelingen</button>
+      </div>
+      <div id="g-melding"></div>
+      <div id="g-spenn"></div>
+      <div id="g-liste"></div>
+      <h3 style="font-size:15px;margin:18px 0 2px">Deltakere</h3>
+      <p class="help" style="margin-bottom:8px">Flytt én person ved å velge en annen gruppe.
+        Endringen lagres først når du trykker «Lagre inndelingen».</p>
+      <div id="g-deltakere"></div>
+    </section>
+
+    <section class="seksjon">
+      <h2>Plenum <span class="c" id="pl-c"></span></h2>
+      <p class="lede">Agendaen er sakene gruppene havnet ulikt på, sortert med gruppesprik øverst
+        og deretter kritikalitet. Ti minutter rekker tre–fire saker, og da avgjør sorteringen
+        hvilke. «Står» er et fullt legitimt utfall.</p>
+      <label class="hake" style="margin-bottom:10px"><input id="pl-alle" type="checkbox" data-fk="pl-alle">
+        Vis alle hypoteser, ikke bare sakene</label>
+      <div id="pl-liste"></div>
     </section>
 
     <section class="seksjon">
@@ -265,7 +379,17 @@ const CFG = window.NORDLYS_CONFIG;
 
 const SKEY = "nordlys-hyp-session";
 let session=null;
-let board=null, arkiv=[], query="";
+let board=null, arkiv=[], query="", deltakere=[];
+/* Forslaget fra admin_foresla_grupper skriver ingenting. Det lever her, i
+   klientens minne, til fasilitator trykker lagre — og tåler ikke en F5. Det er
+   akseptabelt fordi å trekke på nytt tar et sekund, men det må sies i skjermen. */
+let gstate=null, uLagret=false, rortEtterForslag=false, forslagInfo=null, gseed=0;
+/* Åpne «bytt leder»-velgere og kladd i plenumsfeltene holdes mot slug og id, ikke
+   mot DOM-elementet: listene bygges på nytt etter hver handling. */
+const lederAapen=new Set();
+const plenumKladd=new Map();
+let bekreft=null;
+
 
 const $ = id => document.getElementById(id);
 function h(tag, attrs, ...kids){
@@ -350,8 +474,8 @@ function handleErr(e){
   if(e.code==="28000"){ toast(e.message); logout(); return; }
   if(e.code==="42501"){ toast(e.message||"Du har ikke tilgang til backend"); visNektet(); return; }
   if(e.code==="PGRST202"){
-    showBanner("Databasen mangler en funksjon backend bruker. Kjør supabase/migrations/0017_backend_og_leveranser.sql, "+
-               "og deretter: notify pgrst, 'reload schema';");
+    showBanner("Databasen mangler en funksjon backend bruker. Kjør migrasjonene i "+
+               "supabase/migrations/ (0017 og 0021), og deretter: notify pgrst, 'reload schema';");
     return;
   }
   toast(e.message && !/^HTTP/.test(e.message) ? e.message : "Fikk ikke kontakt med serveren. Prøv igjen.");
@@ -382,6 +506,10 @@ async function hentAlt(){
      42501 og hele siden faller over til nektet-visningen — derfor stilles
      spørsmålet om tilgang før kallet, ikke etter. */
   arkiv = board.admin ? (await rpc("admin_arkiv")) : [];
+  deltakere = board.admin ? (await rpc("admin_deltakere")) : [];
+  /* Et ulagret forslag overlever en oppfriskning av tallene — ellers ville
+     «Hent på nytt» midt i inndelingen kastet arbeidet uten å spørre. */
+  if(!uLagret) gstate = gruppperFraBoard();
 }
 async function refresh(){
   try{
@@ -390,6 +518,379 @@ async function refresh(){
     render();
   }catch(e){ handleErr(e); }
 }
+
+/* ---------- oppgave ---------- */
+/* Rekkefølgen er trakten. 'staaved' står med fordi databasen godtar den, men
+   steget er ikke bygget (§8.3) — og en knapp som bare parkerer rommet skal si
+   det selv, ikke oppdages i rommet. */
+const STEG = [
+  ["les","Les","Forstår alle hva som står her?"],
+  ["individuell","Vurder individuelt","Hva mener jeg?"],
+  ["gruppe","Gruppeforslag","Hva kan vi alle leve med?"],
+  ["staaved","Står du ved det?","Ikke bygget — hopp over dette steget."],
+  ["plenum","Plenum","Hva gjenstår, og hva gjør vi med det?"],
+  ["oppgaver","Oppgaver","Hvem gjør hva, innen når?"]
+];
+const oppgave  = () => (board && board.oppgave) || "individuell";
+const stegNr   = m => STEG.findIndex(s=>s[0]===m) + 1;
+const framdrift= () => (board && board.gruppe_framdrift) || [];
+const utildelte= () => deltakere.filter(p=>p.epost && !p.gruppe).length;
+/* Nevneren er utvalget og ikke registeret: «9 av 11» er framgang, mens «9 av 23»
+   leses som fiasko selv når gruppa gjorde nøyaktig det den skulle. */
+const gruppeVurderinger = () => framdrift().reduce((s,g)=>s+(g.n||0),0);
+
+function stegTall(modus){
+  if(modus==="individuell"){
+    const t=(board&&board.deltakere_totalt)||0, v=(board&&board.deltakere_vurdert)||0;
+    return `${v} av ${t} har vurdert`;
+  }
+  if(modus==="gruppe"){
+    const f=framdrift();
+    if(!f.length) return "ingen grupper";
+    const ferdig=f.filter(g=>g.av>0&&g.n>=g.av).length;
+    return `${ferdig} av ${f.length} grupper ferdige`;
+  }
+  if(modus==="plenum"){
+    const saker=hypoteser().filter(x=>x.gruppesprik);
+    if(!saker.length) return "ingen gruppesprik";
+    return `${saker.filter(x=>x.plenum_utfall).length} av ${saker.length} kvittert`;
+  }
+  if(modus==="les") return "";
+  if(modus==="oppgaver"){
+    const u=board&&board.oppgaver&&board.oppgaver.ubehandlet;
+    return u ? `${u} ubehandlet` : "";
+  }
+  return "";
+}
+
+/* Bekreftelsen bygges FØR kallet sendes, og sier hva sideeffekten gjør med
+   antall. Melding fra RPC-en kommer etterpå og er en kvittering, ikke en
+   advarsel — da er byttet allerede gjort. */
+function sideeffekt(modus){
+  const fra=stegNr(oppgave()), til=stegNr(modus), ut=[];
+  const maks=Math.max(parseInt($("s-maks").value,10)||10,1);
+  if(modus==="gruppe")
+    ut.push(`Utvalget fryses på nytt: inntil ${maks} hypoteser går til gruppearbeid. `
+          + "Hypoteser som faller ut, forsvinner fra gruppenes arbeidsliste.");
+  if(modus==="plenum")
+    ut.push("Endelig tall beregnes for alle hypoteser, og gruppesprik settes. "
+          + "En tidligere beregning overskrives.");
+  if(modus==="oppgaver"){
+    ut.push("Oppgavelista åpnes for alle deltakere. Antall ubehandlede saker lagres "
+          + "og følger med ut i eksporten.");
+    if(fra<5) ut.push("Du hopper over plenum, så endelig tall beregnes her i stedet.");
+  }
+  if(modus==="staaved")
+    ut.push("Steg 4 er ikke bygget i klienten. Deltakerne får ingen oppgave, og "
+          + "både individuell vurdering og gruppearbeid er stengt så lenge du står her.");
+  if(til<fra){
+    ut.push(`Du rygger fra steg ${fra} til steg ${til}.`);
+    const n=gruppeVurderinger();
+    if(til<3&&n) ut.push(`${n} ${n===1?"gruppevurdering er":"gruppevurderinger er"} lagret. `
+                       + "Utvalget står urørt nå, men "
+                       + "fryses det på nytt ved neste inngang til gruppearbeid, blir rader "
+                       + "som faller ut foreldreløse.");
+    if(fra>=5) ut.push("Kvitteringene fra plenum blir stående — de er dine handlinger, "
+                     + "og forsvinner ikke fordi du blar feil vei.");
+  }
+  if(!ut.length) ut.push("Byttet endrer bare hvilken oppgave deltakerne ser.");
+  return ut;
+}
+
+async function byttSteg(modus){
+  bekreft=null;
+  try{
+    const r=await rpc("admin_sett_oppgave",{p_modus:modus,
+      p_maks:Math.max(parseInt($("s-maks").value,10)||10,1)});
+    /* Meldingen og advarselen er skrevet i databasen for den som utløste dem.
+       Advarselen er den som kan bli stående uten å bli lest, så den får banneret. */
+    if(r&&r.advarsel) showBanner(r.advarsel);
+    toast((r&&r.melding)||("Steget er satt: "+modus));
+    await refresh();
+  }catch(e){ handleErr(e); render(); }
+}
+
+function renderSteg(){
+  const naa=oppgave();
+  $("steg-c").textContent = `steg ${stegNr(naa)} av 6`;
+  const f=framdrift(), u=utildelte();
+  $("steg-framdrift").replaceChildren(
+    h("span",{},h("b",{},String((board&&board.deltakere_vurdert)||0)),
+      ` av ${(board&&board.deltakere_totalt)||0} har vurdert`),
+    h("span",{},h("b",{},String(hypoteser().filter(x=>x.i_gruppearbeid).length)),
+      " hypoteser i utvalget"),
+    ...f.map(g=>h("span",{},`${g.g.toUpperCase()}: `,h("b",{},`${g.n} av ${g.av}`))),
+    /* Antallet utildelte står her, i linja fasilitator uansett leser før hun
+       bytter steg. Oppdages det etter byttet, sitter noen uten bord. */
+    h("span",{class:u?"ad":""}, u ? `${u} ${u===1?"deltaker":"deltakere"} uten gruppe` : "alle har gruppe"));
+
+  $("steg-valg").replaceChildren(...STEG.map(([k,navn,sp],i)=>
+    h("button",{type:"button",class:(naa===k?"naa":""),title:sp,
+      onclick:()=>{ if(k===naa) return; bekreft=k; render(); }},
+      h("span",{class:"s-navn"},`${i+1} · ${navn}`),
+      h("span",{class:"s-tall"}, naa===k ? (stegTall(k)||"nå") : (stegTall(k)||sp)))));
+
+  $("steg-bekreft").replaceChildren(...(bekreft ? [h("div",{class:"bekreft"},
+    h("h3",{},`Bytte til steg ${stegNr(bekreft)} · ${STEG[stegNr(bekreft)-1][1]}?`),
+    h("ul",{},sideeffekt(bekreft).map(t=>h("li",{},t))),
+    h("div",{class:"row"},
+      h("button",{class:"primary liten",type:"button",onclick:()=>byttSteg(bekreft)},"Bytt steg"),
+      h("button",{class:"ghost",type:"button",onclick:()=>{ bekreft=null; render(); }},"Avbryt")))] : []));
+}
+
+/* ---------- grupper ---------- */
+function gruppperFraBoard(){
+  return ((board&&board.grupper)||[]).map(g=>({
+    nr:g.nr, slug:g.slug, label:g.label, sted:g.sted||"", frist_tekst:g.frist_tekst||"",
+    leder:g.leder||null, medlemmer:(g.medlemmer||[]).map(m=>m.id), lagret:true}));
+}
+const navnFor = id => { const p=deltakere.find(x=>x.id===id); return p?p.navn:"(ukjent)"; };
+const gruppeFor = id => (gstate||[]).find(g=>g.medlemmer.includes(id));
+
+function flyttTil(pid, slug){
+  (gstate||[]).forEach(g=>{
+    g.medlemmer=g.medlemmer.filter(x=>x!==pid);
+    /* Flyttes lederen ut, skal gruppa stå uten leder og ikke med en som sitter
+       ved et annet bord. Samme regel som admin_lagre_grupper håndhever. */
+    if(g.leder===pid && g.slug!==slug) g.leder=null;
+  });
+  const g=(gstate||[]).find(x=>x.slug===slug);
+  if(g) g.medlemmer.push(pid);
+  uLagret=true; rortEtterForslag=true; render();
+}
+
+async function foresla(paaNytt){
+  if(uLagret && !paaNytt && !confirm("Du har et ulagret forslag. Trekke på nytt?")) return;
+  gseed = paaNytt ? gseed+1 : 0;
+  try{
+    const r=await rpc("admin_foresla_grupper",{
+      p_antall:Math.max(parseInt($("g-antall").value,10)||4,1),
+      p_seed:gseed, p_med_admin:$("g-admin").checked});
+    gstate=(r.grupper||[]).map(g=>({
+      nr:g.nr, slug:g.slug, label:g.label,
+      /* Sted og klokkeslett kommer ikke fra algoritmen, men de er det
+         storskjermen sier — så et eksisterende sted beholdes ved ny trekning. */
+      sted:(((board&&board.grupper)||[]).find(x=>x.slug===g.slug)||{}).sted||"",
+      frist_tekst:(((board&&board.grupper)||[]).find(x=>x.slug===g.slug)||{}).frist_tekst||"",
+      leder:g.leder||null, medlemmer:(g.medlemmer||[]).map(m=>m.id),
+      spenn:g.spenn, virksomheter:g.virksomheter, antall:g.antall, uten_stemme:g.uten_stemme,
+      lagret:false}));
+    forslagInfo={melding:r.melding||null, bruddlinjer:r.bruddlinjer||[], bytter:r.bytter||0};
+    uLagret=true; rortEtterForslag=false;
+    render();
+  }catch(e){ handleErr(e); }
+}
+
+async function lagreGrupper(){
+  if(!gstate||!gstate.length){ toast("Ingen grupper å lagre"); return; }
+  const uten=deltakere.filter(p=>p.epost&&!gruppeFor(p.id)).length;
+  if(!confirm(`Lagre inndelingen?\n\n${gstate.length} grupper. `
+    + (uten?`${uten} deltakere blir stående uten gruppe.\n\n`:"Alle deltakere får en gruppe.\n\n")
+    + "Hele inndelingen skrives på nytt — også de som ikke er med i forslaget, mister gruppen sin.")) return;
+  try{
+    const r=await rpc("admin_lagre_grupper",{p_json:gstate.map(g=>({
+      slug:g.slug, nr:g.nr, label:g.label, sted:g.sted, frist_tekst:g.frist_tekst,
+      leder:g.leder||null, medlemmer:g.medlemmer}))});
+    uLagret=false; rortEtterForslag=false;
+    toast(`${r.grupper} grupper lagret`+(r.utildelte?`, ${r.utildelte} uten gruppe`:""));
+    await refresh();
+  }catch(e){ handleErr(e); }
+}
+
+async function settLeder(g, pid){
+  if(!g.lagret){
+    /* Gruppa finnes ikke i databasen ennå, så RPC-en ville svart «finnes ikke».
+       Lederen følger med lagringen i stedet. */
+    g.leder=pid||null; uLagret=true; lederAapen.delete(g.slug); render(); return;
+  }
+  try{
+    await rpc("admin_sett_gruppeleder",{p_slug:g.slug, p_pid:pid||null});
+    lederAapen.delete(g.slug);
+    toast(pid?`${navnFor(pid)} fører for ${g.label}`:`${g.label} står uten leder`);
+    await refresh();
+  }catch(e){ handleErr(e); }
+}
+
+function gruppeKort(g){
+  const aapen=lederAapen.has(g.slug);
+  const velger=h("select",{"data-fk":`leder-${g.slug}`},
+    h("option",{value:"",selected:!g.leder},"— ingen —"),
+    g.medlemmer.map(id=>h("option",{value:id,selected:g.leder===id},navnFor(id))));
+  return h("div",{class:"gr-kort"},
+    h("div",{class:"rad-topp"},
+      h("strong",{style:"font-size:15px"},g.label),
+      h("span",{class:"slug"},g.slug),
+      g.lagret?null:h("span",{class:"badge w"},"ikke lagret"),
+      h("span",{class:"spacer"}),
+      h("span",{class:"nr"},`${g.medlemmer.length === 1 ? "1 person" : g.medlemmer.length + " personer"}`)),
+    h("div",{class:"gr-medl"},g.medlemmer.length
+      ? g.medlemmer.map(id=>h("span",{class:g.leder===id?"leder":""},
+          (g.leder===id?"▸ ":"")+navnFor(id)))
+      : [h("span",{class:"ingen"},"ingen medlemmer")]),
+    h("div",{class:"row"},
+      h("div",{class:"field"},h("label",{for:`g-sted-${g.slug}`},"Sted"),
+        h("input",{id:`g-sted-${g.slug}`,"data-fk":`sted-${g.slug}`,maxlength:"120",
+          value:g.sted,placeholder:"vindusbordet",
+          oninput:e=>{ g.sted=e.target.value; uLagret=true; }})),
+      h("div",{class:"field"},h("label",{for:`g-frist-${g.slug}`},"Frist"),
+        h("input",{id:`g-frist-${g.slug}`,"data-fk":`frist-${g.slug}`,maxlength:"60",
+          value:g.frist_tekst,placeholder:"til 15.20",
+          oninput:e=>{ g.frist_tekst=e.target.value; uLagret=true; }})),
+      /* Egen, synlig knapp — ikke et felt nede i et skjema. Når bare lederen
+         skriver, er en leder som faller fra en gruppe som står stille i tjue
+         minutter, og det skal fikses på fem sekunder. */
+      aapen?null:h("button",{class:"primary liten",type:"button",
+        onclick:()=>{ lederAapen.add(g.slug); render(); }},
+        g.leder?"Bytt leder":"Pek ut leder")),
+    aapen?h("div",{class:"row"},
+      h("div",{class:"field"},h("label",{for:`leder-${g.slug}`},"Fører i pennen"),velger),
+      h("button",{class:"primary liten",type:"button",
+        onclick:()=>settLeder(g,velger.value||null)},"Sett leder"),
+      h("button",{class:"ghost",type:"button",
+        onclick:()=>{ lederAapen.delete(g.slug); render(); }},"Avbryt")):null);
+}
+
+function renderGrupper(){
+  const liste=(gstate||[]).slice().sort((a,b)=>a.nr-b.nr||a.slug.localeCompare(b.slug,"nb"));
+  $("gr-c").textContent = liste.length
+    ? `${liste.length} stk`+(uLagret?" · ikke lagret":"") : "";
+  $("g-paanytt").hidden = !liste.length;
+  $("g-lagre").disabled = !liste.length;
+
+  const meld=[];
+  if(forslagInfo&&forslagInfo.melding)
+    meld.push(h("p",{class:"varsel"},h("strong",{},"Tilfeldig fordeling. "),forslagInfo.melding));
+  if(uLagret)
+    meld.push(h("p",{class:"varsel"},h("strong",{},"Ikke lagret. "),
+      "Forslaget lever bare i denne fanen. Lukker eller oppdaterer du siden, er det borte — "
+      + "men å trekke på nytt tar et sekund."));
+  $("g-melding").replaceChildren(...meld);
+
+  /* Spennet står her, rett over lagreknappen. Lav spenn betyr at gruppa blir
+     ferdig på fem minutter uten å ha diskutert noe. */
+  const medSpenn=liste.filter(g=>g.spenn!=null);
+  $("g-spenn").replaceChildren(...(medSpenn.length ? [h("div",{class:"spenn"},
+    ...medSpenn.map(g=>h("div",{class:"lin"},
+      h("b",{},g.label),
+      h("span",{},`spenn ${Number(g.spenn).toFixed(1)}`),
+      h("span",{},`${g.virksomheter} virksomheter`),
+      h("span",{},`${g.antall} personer`),
+      g.uten_stemme?h("span",{class:"merk"},`${g.uten_stemme} uten stemme`):null,
+      Number(g.spenn)<3?h("span",{class:"flagg"},"← for enig, bytt noen"):null)),
+    forslagInfo&&forslagInfo.bruddlinjer&&forslagInfo.bruddlinjer.length
+      ? h("div",{class:"merk"},"Bruddlinjer: "+forslagInfo.bruddlinjer.map(nr).join(", ")
+          +(forslagInfo.bytter?` · ${forslagInfo.bytter} bytter for å spre virksomheter`:"")) : null,
+    rortEtterForslag
+      ? h("div",{class:"merk"},"Spennet er regnet ut for forslaget, ikke for endringene dine. "
+          + "Trekk på nytt for ferske tall.") : null)] : []));
+
+  $("g-liste").replaceChildren(...(liste.length ? liste.map(gruppeKort)
+    : [h("p",{class:"ingen"},"Ingen grupper ennå. Trykk «Foreslå grupper».")]));
+
+  /* Samme radmønster som leveransene: én rad, én select, ingen lagreknapp —
+     hele inndelingen lagres i ett kall. */
+  const folk=deltakere.filter(p=>p.epost);
+  $("g-deltakere").replaceChildren(...(folk.length ? folk.map(p=>{
+    const g=gruppeFor(p.id);
+    return h("div",{class:"dl-rad"},
+      h("span",{class:"navn"},p.navn||p.epost, p.admin?h("span",{class:"badge",style:"margin-left:7px"},"admin"):null),
+      h("span",{class:"dom"},p.epost||""),
+      h("span",{class:"tall"},`${p.vurdert} vurdert`),
+      h("select",{"data-fk":`dl-${p.id}`,"aria-label":"Gruppe for "+(p.navn||p.epost),
+        onchange:e=>flyttTil(p.id,e.target.value)},
+        h("option",{value:"",selected:!g},"— ingen gruppe —"),
+        liste.map(x=>h("option",{value:x.slug,selected:!!g&&g.slug===x.slug},x.label))));
+  }) : [h("p",{class:"ingen"},"Ingen deltakere.")]));
+}
+$("g-foresla").addEventListener("click",()=>foresla(false));
+$("g-paanytt").addEventListener("click",()=>foresla(true));
+$("g-lagre").addEventListener("click",lagreGrupper);
+
+/* ---------- plenum ---------- */
+/* endelig_k sendes først fra og med plenum (get_board holder det tilbake med
+   vilje). Før den tid sorteres agendaen på individsnittet, ellers ville lista
+   stått i tilfeldig rekkefølge nettopp mens fasilitator forbereder seg. */
+function snittK(id){
+  const rs=((board&&board.ratings)||[]).filter(r=>r.h===id&&r.k>=1);
+  return rs.length ? rs.reduce((s,r)=>s+r.k,0)/rs.length : null;
+}
+const kFor = x => x.endelig_k!=null ? x.endelig_k : snittK(x.id);
+
+function plenumRad(x){
+  const kladd=plenumKladd.get(x.id)||{};
+  const forslag=((board&&board.gruppe_ratings)||[]).filter(r=>r.h===x.id);
+  const k=h("input",{id:`pl-k-${x.id}`,"data-fk":`pl-k-${x.id}`,type:"number",min:"0",max:"10",
+    value:kladd.k!=null?kladd.k:(x.endelig_k!=null?x.endelig_k:""),
+    oninput:e=>{ const s=plenumKladd.get(x.id)||{}; s.k=e.target.value; plenumKladd.set(x.id,s); }});
+  const u=h("input",{id:`pl-u-${x.id}`,"data-fk":`pl-u-${x.id}`,type:"number",min:"0",max:"10",
+    value:kladd.u!=null?kladd.u:(x.endelig_u!=null?x.endelig_u:""),
+    oninput:e=>{ const s=plenumKladd.get(x.id)||{}; s.u=e.target.value; plenumKladd.set(x.id,s); }});
+  const notat=h("input",{id:`pl-n-${x.id}`,"data-fk":`pl-n-${x.id}`,maxlength:"500",
+    value:kladd.notat!=null?kladd.notat:(x.plenum_notat||""),
+    placeholder:"Hva rommet landet på",
+    oninput:e=>{ const s=plenumKladd.get(x.id)||{}; s.notat=e.target.value; plenumKladd.set(x.id,s); }});
+
+  async function kvitter(utfall){
+    const args={p_id:x.id, p_utfall:utfall, p_notat:notat.value.trim()};
+    if(utfall==="justert"){
+      /* RPC-en avviser justert uten begge tall, så skjemaet må be om dem her —
+         en feilmelding etter et trykk i plenum koster tid rommet ikke har. */
+      const kk=parseInt(k.value,10), uu=parseInt(u.value,10);
+      if(!(kk>=0&&kk<=10)||!(uu>=0&&uu<=10)){
+        toast("Justert plassering krever både kritikalitet og usikkerhet (0–10)");
+        (k.value===""?k:u).focus(); return;
+      }
+      args.p_k=kk; args.p_u=uu;
+    }
+    try{
+      await rpc("admin_kvitter_plenum",args);
+      plenumKladd.delete(x.id);
+      toast(`${nr(x.nr)}: ${utfall}`);
+      await refresh();
+    }catch(e){ handleErr(e); }
+  }
+
+  return h("div",{class:"rad"},
+    h("div",{class:"rad-topp"},
+      h("span",{class:"nr"},nr(x.nr)),
+      x.gruppesprik?h("span",{class:"badge w",title:"Gruppene havnet i ulikt felt."},"Gruppesprik"):null,
+      x.i_gruppearbeid?h("span",{class:"badge"},"I gruppearbeidet"):null,
+      h("span",{class:"spacer"}),
+      x.plenum_utfall?h("span",{class:"kvitt"},"kvittert: "+x.plenum_utfall):null,
+      h("span",{class:"slug"},
+        x.endelig_k!=null?`endelig ${x.endelig_k}/${x.endelig_u!=null?x.endelig_u:"–"}`
+                         :(kFor(x)!=null?`snitt k ${kFor(x).toFixed(1)}`:"ingen tall"))),
+    h("p",{class:"tekst"},x.tekst||""),
+    /* Gruppenes forslag står per sak, så fasilitator ser hva spriket består i
+       uten å bytte skjerm. 0 er «vet ikke» og ikke et lavt tall. */
+    forslag.length?h("div",{class:"pl-forslag"},forslag.map(r=>h("span",{title:r.hensyn||""},
+      `${String(r.g).toUpperCase()}: ${r.k===0?"vet ikke":r.k}/${r.u===0?"vet ikke":r.u}`
+      +(r.hensyn?" ✎":"")))):h("p",{class:"ingen"},"Ingen gruppeforslag."),
+    forslag.filter(r=>r.hensyn).map(r=>h("p",{class:"help"},
+      `${String(r.g).toUpperCase()}: ${r.hensyn}`)),
+    h("div",{class:"pl-just"},
+      h("div",{class:"field"},h("label",{for:`pl-k-${x.id}`},"Kritisk"),k),
+      h("div",{class:"field"},h("label",{for:`pl-u-${x.id}`},"Usikker"),u),
+      h("div",{class:"field"},h("label",{for:`pl-n-${x.id}`},"Notat"),notat),
+      h("div",{class:"row"},
+        h("button",{class:"primary liten",type:"button",onclick:()=>kvitter("justert")},"Justert"),
+        h("button",{class:"primary liten",type:"button",onclick:()=>kvitter("staar")},"Står"),
+        h("button",{class:"primary liten",type:"button",onclick:()=>kvitter("eskalert")},"Eskalert"))));
+}
+
+function renderPlenum(){
+  const alle=$("pl-alle").checked;
+  let liste=hypoteser().filter(x=>alle||x.gruppesprik||x.i_gruppearbeid);
+  /* Gruppesprik øverst, deretter kritikalitet: ti minutter rekker tre–fire
+     saker, og da avgjør sorteringen hvilke. */
+  liste.sort((a,b)=>(b.gruppesprik?1:0)-(a.gruppesprik?1:0)
+                  || (kFor(b)||0)-(kFor(a)||0) || a.nr-b.nr);
+  const saker=hypoteser().filter(x=>x.gruppesprik).length;
+  $("pl-c").textContent = saker ? `${saker} med gruppesprik` : (liste.length?`${liste.length} stk`:"");
+  $("pl-liste").replaceChildren(...(liste.length?liste.map(plenumRad)
+    :[h("p",{class:"ingen"},"Ingenting å behandle ennå. Gruppesprik beregnes når du åpner plenum.")]));
+}
+$("pl-alle").addEventListener("change",()=>medFokus(renderPlenum));
 
 /* ---------- leveranser ---------- */
 function levRad(d){
@@ -561,8 +1062,22 @@ function renderVisning(){
       h("span",{}, h("strong",{},navn), h("span",{class:"hjelp"},hjelp)))));
 }
 
-function render(){
-  renderVisning(); renderLev(); renderHyp(); renderArkiv();
+/* Listene bygges på nytt ved hver handling, og flere av dem inneholder felter
+   fasilitator står og skriver i. Fokus festes derfor til data-fk og ikke til
+   elementet, som byttes ut under fingrene. */
+function medFokus(f){
+  const akt=document.activeElement, fk=akt&&akt.getAttribute&&akt.getAttribute("data-fk");
+  let pos=null; try{ pos=fk?akt.selectionStart:null; }catch(e){}
+  f();
+  if(!fk) return;
+  const ny=document.querySelector(`[data-fk="${CSS.escape(fk)}"]`);
+  if(ny&&ny!==akt){ ny.focus(); if(pos!=null&&ny.setSelectionRange) try{ ny.setSelectionRange(pos,pos); }catch(e){} }
+}
+
+function render(){ medFokus(tegn); }
+function tegn(){
+  renderSteg(); renderVisning(); renderGrupper(); renderPlenum();
+  renderLev(); renderHyp(); renderArkiv();
   /* Nedtrekkene i «Ny hypotese» bygges av leveranselista og blir utdaterte i det
      en leveranse legges til eller døpes om. Valget beholdes, slik at en halvt
      utfylt hypotese ikke mister leveransen fordi noe annet ble lagret. */
@@ -717,7 +1232,9 @@ function enter(){
 function logout(){
   if(session&&session.access_token) fetch(`${CFG.supabaseUrl}/auth/v1/logout`,{method:"POST",
     headers:{apikey:CFG.supabaseKey,Authorization:"Bearer "+session.access_token}}).catch(()=>{});
-  store(false,null); session=null; board=null; arkiv=[];
+  store(false,null); session=null; board=null; arkiv=[]; deltakere=[];
+  gstate=null; uLagret=false; forslagInfo=null; bekreft=null;
+  lederAapen.clear(); plenumKladd.clear();
   $("banner").hidden=true;
   $("l-epost").value = husketEpost() || $("l-epost").value;
   visEpoststeg();

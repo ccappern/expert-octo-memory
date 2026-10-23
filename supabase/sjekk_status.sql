@@ -238,6 +238,120 @@ with sjekk(nr, hva, ok) as (values
         and pg_get_functiondef(p.oid) like '%h.leveranse%'
         and pg_get_functiondef(p.oid) like '%''admin''%')),
 
+  -- ---------- 0021: trakten, grupper og det endelige tallet ----------
+  ('0021', 'oppgave er taktpinnen på workshopen', exists(
+     select 1 from information_schema.columns
+      where table_schema='public' and table_name='workshops' and column_name='oppgave')
+   and exists(
+     select 1 from pg_constraint
+      where conrelid='public.workshops'::regclass and conname='workshops_oppgave_check'
+        and pg_get_constraintdef(oid) like '%oppgaver%')),
+
+  -- Sperren foran steg 6 er myk (§9), men ikke gratis: antallet følger med ut
+  -- i eksporten, så en oppgaveliste laget på overtid sier det selv.
+  ('0021', 'antall ubehandlede saker lagres når oppgavelista åpnes', exists(
+     select 1 from information_schema.columns
+      where table_schema='public' and table_name='workshops'
+        and column_name='oppgaver_apnet_ubehandlet')),
+
+  ('0021', 'grupper og gruppevurderinger finnes som egne tabeller', (
+     to_regclass('public.groups') is not null
+     and to_regclass('public.group_ratings') is not null)),
+
+  -- Sted og klokkeslett er ikke pynt: de er beskjeden storskjermen gir i det
+  -- 21 personer reiser seg. Uten dem må den gis muntlig 21 ganger.
+  ('0021', 'gruppene har sted, frist og leder', (
+     select count(*) from information_schema.columns
+      where table_schema='public' and table_name='groups'
+        and column_name in ('sted','frist_tekst','leder')) = 3),
+
+  ('0021', 'utvalg, endelig tall og gruppesprik på hypotesene', (
+     select count(*) from information_schema.columns
+      where table_schema='public' and table_name='hypotheses'
+        and column_name in ('i_gruppearbeid','endelig_k','endelig_u','gruppesprik')) = 4),
+
+  ('0021', 'plenumskvitteringen har utfall, notat og sporing', (
+     select count(*) from information_schema.columns
+      where table_schema='public' and table_name='hypotheses'
+        and column_name in ('plenum_utfall','plenum_notat','plenum_av','plenum_tid')) = 4),
+
+  -- «Vet ikke» er 0 og ikke et lavt tall — også for grupper. At fem personer
+  -- sammen ikke vet, er et sterkere signal enn at én ikke gjør det.
+  ('0021', '«vet ikke» (0) er tillatt også for gruppene', exists(
+     select 1 from pg_constraint
+      where conrelid='public.group_ratings'::regclass and conname='group_ratings_k_check'
+        and pg_get_constraintdef(oid) like '%k >= 0%')),
+
+  -- Låsingen av steg 2 hører i databasen: den publiserbare nøkkelen er kjent,
+  -- så en sperre i nettleseren er ingen sperre.
+  ('0021', 'rate_hypothesis avviser skriving utenfor individuell', exists(
+     select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+      where n.nspname='public' and p.proname='rate_hypothesis'
+        and pg_get_functiondef(p.oid) like '%<> ''individuell''%')),
+
+  -- Bare gruppelederen skriver (§5). Kunne alle fem, ville to som drar på
+  -- samme skala overskrive hverandre uten at noen merker det.
+  ('0021', 'rate_group_hypothesis krever at kalleren er gruppas leder', exists(
+     select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+      where n.nspname='public' and p.proname='rate_group_hypothesis'
+        and pg_get_functiondef(p.oid) like '%gruppelederen%')),
+
+  -- Den optimistiske låsen utgikk med skriveretten. Dukker p_forrige opp
+  -- igjen, er forenklingen i §5 reversert uten at noen bestemte det.
+  ('0021', 'rate_group_hypothesis har ingen p_forrige', exists(
+     select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+      where n.nspname='public' and p.proname='rate_group_hypothesis'
+        and pg_get_function_arguments(p.oid) not like '%p_forrige%')),
+
+  ('0021', 'alle de nye RPC-ene finnes', (
+     select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+      where n.nspname='public' and p.proname in
+        ('rate_group_hypothesis','admin_sett_oppgave','admin_sett_gruppe',
+         'admin_slett_gruppe','admin_sett_gruppeleder','admin_foresla_grupper',
+         'admin_lagre_grupper','admin_sett_deltaker_gruppe','admin_deltakere',
+         'admin_kvitter_plenum')) = 10),
+
+  -- Sideeffektene må skje i SAMME transaksjon som stegbyttet. Skjer de i et
+  -- eget kall etterpå, finnes det et vindu der rommet står i gruppearbeid uten
+  -- utvalg — og 21 personer ser en tom liste.
+  ('0021', 'admin_sett_oppgave fryser utvalget og beregner endelig tall', exists(
+     select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+      where n.nspname='public' and p.proname='admin_sett_oppgave'
+        and pg_get_functiondef(p.oid) like '%frys_utvalg%'
+        and pg_get_functiondef(p.oid) like '%beregn_endelig%'
+        and pg_get_functiondef(p.oid) like '%oppgaver_apnet_ubehandlet%')),
+
+  ('0021', 'hjelperne for steg, sprik, utvalg og endelig tall finnes', (
+     select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+      where n.nspname='private'
+        and p.proname in ('steg_nr','sprik','frys_utvalg','beregn_endelig')) = 4),
+
+  -- Filtreringen ER sperren. Ligger den bare i klienten, kan hvem som helst
+  -- lese gruppenes tall og oppgavelista med den publiserbare nøkkelen.
+  ('0021', 'get_board filtrerer gruppetall og holder oppgavelista tilbake', exists(
+     select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+      where n.nspname='public' and p.proname='get_board'
+        and pg_get_functiondef(p.oid) like '%gruppe_ratings%'
+        and pg_get_functiondef(p.oid) like '%gruppe_framdrift%'
+        and pg_get_functiondef(p.oid) like '%v_oppgave = ''oppgaver''%')),
+
+  ('0021', 'anon kan ikke kjøre de nye RPC-ene', not exists(
+     select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+      where n.nspname='public'
+        and p.proname in ('rate_group_hypothesis','admin_sett_oppgave',
+                          'admin_foresla_grupper','admin_lagre_grupper')
+        and has_function_privilege('anon', p.oid, 'execute'))),
+
+  ('0021', 'gruppetabellene er stengt for direkte lesing', (
+     select bool_and(relrowsecurity) from pg_class
+      where oid in ('public.groups'::regclass, 'public.group_ratings'::regclass))),
+
+  -- standpunkt og objections er merket [Senere] i §8. Dukker de opp her, er
+  -- noe bygget som ikke er besluttet.
+  ('0021', 'standpunkt og objections er IKKE bygget ennå', (
+     to_regclass('public.standpunkt') is null
+     and to_regclass('public.objections') is null)),
+
   ('0016', 'de 21 inviterte har e-post', (
      select count(*) from public.participants where epost is not null) >= 21),
 
