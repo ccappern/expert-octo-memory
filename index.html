@@ -2438,9 +2438,19 @@ async function refresh(){
        valgt noe ETTER stegbyttet — overstyrer vi hver gang, kastes folk
        tilbake til lesemodus midt i arbeidet. */
     if(!stegSett || nyOppgave!==oppgave){
+      const nyLasting = !stegSett;
       stegSett=true;
       lesIdx=0;
       if(visSteg!==nyOppgave) vis="les";
+      /* En sidelasting er ikke «midt i arbeidet». Den som kommer inn skal
+         lande på hypotesene, ikke på resultatet: matrisen viser ingen tekst å
+         vurdere, og den er dessuten nettopp ankringsflaten vi ellers skjuler
+         mens folk stemmer. Ett klikk på Matrise ville ellers fulgt deltakeren
+         ut hele steget, ved hver eneste lasting.
+         Liste beholdes — den viser hypotesene og er et reelt arbeidsvalg.
+         Vi rører ikke localStorage: velger hun Matrise igjen i denne økten,
+         står den til hun laster på nytt. */
+      else if(nyLasting && vis==="matrise") vis="les";
     }
     oppgave=nyOppgave; grupper=nyGrupper; minGruppe=nyMinGruppe;
     gruppeRates=nyGruppeRates; gruppeFramdrift=nyFramdrift; oppgaveliste=nyOppgaveliste;

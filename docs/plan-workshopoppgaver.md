@@ -868,6 +868,19 @@ Appen åpner i Les når et nytt steg starter, men **bare hvis deltakeren ikke se
 noe etter stegbyttet**. Overstyrer vi valget hver gang, kastes folk tilbake til lesemodus
 midt i arbeidet.
 
+**En sidelasting er ikke et stegbytte, og skal behandles motsatt.** Den som kommer inn skal
+lande på hypotesene og ikke på resultatet. Matrise faller derfor tilbake til Les ved hver
+lasting; Liste beholdes, fordi den også viser hypotesene og er et reelt arbeidsvalg.
+
+Uten den regelen følger ett klikk på Matrise deltakeren ut hele steget: valget lagres
+sammen med steget det ble tatt i, og så lenge steget står stille er ingen lasting et «nytt
+steg». Resultatet er en deltaker som åpner lenken og ser et resultatbilde uten en eneste
+påstand å vurdere — og matrisen er dessuten nettopp den ankringsflaten `resultatvisning`
+ellers er bygget for å skjule mens folk stemmer.
+
+Valget i `localStorage` røres ikke av tilbakefallet. Velger hun Matrise igjen, står den ut
+økten.
+
 Fasilitator kan ikke tvinge visningen på deltakerne. Folk leser i ulikt tempo, og en tvungen
 felles markør gjør de raske utålmodige og de grundige stresset.
 
