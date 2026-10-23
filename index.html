@@ -77,17 +77,47 @@ button.primary:disabled{opacity:.5;cursor:default}
 
 /* ---------- sammendrag ---------- */
 .summary{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin:18px 0}
-.kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;min-width:0}
-.kpi .n{font-family:var(--f-display);font-size:26px;font-weight:700;line-height:1.1;font-variant-numeric:tabular-nums}
-.kpi .t{font-size:12.5px;color:var(--muted);margin-top:2px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:13px 15px;min-width:0}
+/* Overskriften står ØVERST og tallet under. Omvendt rekkefølge tvinger leseren
+   til å lese et tall uten å vite hva det teller, og så lese det om igjen. */
+.kpi .hd{font-size:11.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.kpi .n{font-family:var(--f-display);font-size:27px;font-weight:700;line-height:1.05;
+  font-variant-numeric:tabular-nums;margin-top:5px;display:flex;align-items:baseline;gap:5px}
+.kpi .n s{text-decoration:none;font-size:16px;font-weight:600;color:var(--muted)}
+.kpi .sub{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.35}
 .kpi.hot{border-color:var(--accent);background:var(--accent-soft)}
 .kpi.hot .n{color:var(--accent)}
 .kpi.warn{border-color:var(--warn);background:var(--warnbg)}
 .kpi.warn .n{color:var(--warn)}
-.kpi.me .bar{height:5px;border-radius:3px;background:var(--sunk);margin-top:7px;overflow:hidden}
-.kpi.me .bar i{display:block;height:100%;background:var(--accent);border-radius:3px;transition:width .4s ease}
+.kpi.rolig .n{color:var(--muted);font-size:22px}
 .kpi button{all:unset;cursor:pointer;display:block;width:100%}
 .kpi button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+
+/* Tallet og bildet side om side: bildet skal leses med ett blikk, ikke
+   studeres. Ringen er derfor liten og uten tekst inni. */
+.kpi .rad{display:flex;align-items:center;gap:12px;justify-content:space-between}
+.kpi .ring{flex:none}
+.kpi .ring circle{fill:none;stroke-width:5}
+.kpi .ring .spor{stroke:var(--sunk)}
+.kpi .ring .fyll{stroke:var(--accent);stroke-linecap:round;
+  transform:rotate(-90deg);transform-origin:50% 50%;transition:stroke-dasharray .45s ease}
+
+/* Én prikk per inviterte. Et tall svarer «hvor mange», prikkene svarer «hvor
+   mange GJENSTÅR» — og det er det spørsmålet en fasilitator faktisk har. */
+.kpi .prikker{display:flex;flex-wrap:wrap;gap:3.5px;margin-top:8px}
+.kpi .prikker i{width:8px;height:8px;border-radius:50%;background:var(--sunk);display:block}
+.kpi .prikker i.pa{background:var(--accent)}
+
+/* Stablet stolpe: bredden per leveranse viser hvor tyngdepunktet i registeret
+   faktisk ligger. En leveranse uten andel er et synlig hull i stolpen. */
+.kpi .stabel{display:flex;height:7px;border-radius:4px;overflow:hidden;background:var(--sunk);margin-top:8px}
+.kpi .stabel i{display:block;height:100%}
+.kpi .stabel i+i{box-shadow:inset 1px 0 0 var(--surface)}
+
+.kpi .bar{height:6px;border-radius:3px;background:var(--sunk);margin-top:8px;overflow:hidden}
+.kpi .bar i{display:block;height:100%;background:var(--accent);border-radius:3px;transition:width .4s ease}
+.kpi.warn .bar i{background:var(--warn)}
+.kpi.hot .bar{background:color-mix(in srgb,var(--accent) 22%,transparent)}
 
 /* ---------- to kolonner ---------- */
 /* Matrisen er det som leses på avstand i et møterom, så den får plassen.
@@ -287,11 +317,14 @@ body.scene{font-size:17px}
 /* Fundamentet er bare for storskjerm. På en laptop ville søylene blitt for
    smale til å skille steinene fra hverandre, og da sier bildet ingenting. */
 #fundament{display:none}
-body.scene #fundament{display:block;width:100%;height:auto}
+body.scene.fund #fundament{display:block;width:100%;height:auto}
 body.scene.fund #chart,body.scene.fund .legend,body.scene.fund #unrated{display:none!important}
-body.scene:not(.fund) #fundament{display:none}
 .scene-nav{display:none}
-body.scene .scene-nav{display:block;text-align:center;color:var(--muted);font-size:14px;margin:6px 0 0}
+body.scene .scene-nav{display:flex;justify-content:center;align-items:center;gap:12px;margin:10px 0 0}
+body.scene .scene-nav span{color:var(--muted);font-size:13.5px}
+body.scene .scene-nav button{border:1px solid var(--line);background:var(--surface);color:var(--ink);
+  border-radius:999px;padding:7px 18px;font-size:15px;font-weight:600;cursor:pointer}
+body.scene .scene-nav button:hover{border-color:var(--accent);color:var(--accent)}
 body.scene .cols{grid-template-columns:minmax(0,1fr);gap:0}
 body.scene .col-side{position:static;max-height:none;overflow:visible;
   grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:20px;align-items:start}
@@ -327,7 +360,7 @@ body.scene header.top{min-height:52px}
     <span class="live" id="live"><span class="dot"></span><span id="live-t"></span></span>
     <button class="me" id="me-name" type="button" title="Klikk for å rette navnet ditt"></button>
     <a class="ghost" id="til-backend" href="admin.html" hidden>Backend</a>
-    <button class="ghost" id="scene">Storskjerm</button>
+    <button class="ghost" id="scene" hidden>Storskjerm</button>
     <button class="ghost" id="exp-md">Eksporter .md</button>
     <button class="ghost" id="exp-csv">.csv</button>
     <button class="ghost" id="logout">Logg ut</button>
@@ -395,16 +428,17 @@ body.scene header.top{min-height:52px}
             </span>
           </h3>
           <svg id="chart" viewBox="0 0 420 420" role="img" aria-label="Matrise: kritikalitet mot usikkerhet"></svg>
-          <svg id="fundament" viewBox="0 0 1000 560" role="img" hidden
+          <svg id="fundament" viewBox="0 0 1000 560" role="img"
                aria-label="Fundament: hypotesenes dekning per leveranse"></svg>
-          <p class="scene-nav" id="scene-nav">Matrise — ← → for fundamentet</p>
+          <div class="scene-nav"><button type="button" id="scene-bytt">Vis fundamentet →</button>
+            <span>eller bruk ← →</span></div>
           <div class="tray" id="mx-tray" hidden></div>
           <div class="pending" id="mx-pending" hidden></div>
           <div class="legend" id="legend"></div>
           <p class="unrated" id="unrated"></p>
         </div>
-        <div class="pane" id="tasks-pane"></div>
         <div class="pane" id="detail"></div>
+        <div class="pane" id="tasks-pane"></div>
       </aside>
     </div>
   </div>
@@ -492,6 +526,10 @@ let visning="etter_stemme";
    modus. «3 har vurdert» anker ingen retning, men sier om hypotesen er moden
    for diskusjon. */
 let tellinger={};
+/* Begge kommer fra databasen og ikke fra radene vi har fått. I lukket modus ser
+   klienten bare sine egne vurderinger, og ville alltid talt seg selv som den
+   eneste som hadde stemt. */
+let deltakereTotalt=0, deltakereVurdert=0;
 let filter="alle", sort="nr", query="", selected=null, editing=null;
 /* Satt mens noen er i ferd med å sette avklart status og skal skrive belegget.
    {id, status} — statusen er ikke lagret ennå. */
@@ -691,27 +729,103 @@ function eierValg(id, valgt){
 const ferdigVurdert = x => { const m=myRates[x.id]; return !!m && harSvart(m.k) && harSvart(m.u); };
 
 /* ---------- sammendrag ---------- */
+/* Hvert kort skal svare på ett spørsmål, og bildet skal legge til noe tallet
+   ikke sier. Ingen av dem er en tidsserie: vi lagrer ikke historikk, så en
+   sparkline ville vært pynt uten innhold. */
+
+/* Ring framfor stolpe der det er én andel av en helhet. Den leses som «hvor
+   mye gjenstår» uten at man må sammenligne to lengder. */
+function kpiRing(andel){
+  const r=17, o=2*Math.PI*r, f=Math.max(0,Math.min(1,andel))*o;
+  return s_("svg",{class:"ring",width:"44",height:"44",viewBox:"0 0 44 44","aria-hidden":"true"},
+    s_("circle",{class:"spor",cx:"22",cy:"22",r:String(r)}),
+    s_("circle",{class:"fyll",cx:"22",cy:"22",r:String(r),
+      "stroke-dasharray":`${f.toFixed(1)} ${(o-f).toFixed(1)}`}));
+}
+function kpiPrikker(fylt, totalt){
+  /* Over tjuefem prikker slutter de å være tellbare og blir en tekstur. Da er
+     stolpen mer ærlig. */
+  if(totalt>25||!totalt) return h("div",{class:"bar"},h("i",{style:`width:${totalt?100*fylt/totalt:0}%`}));
+  return h("div",{class:"prikker","aria-hidden":"true"},
+    Array.from({length:totalt},(_,i)=>h("i",{class:i<fylt?"pa":""})));
+}
+function kpiStabel(deler){
+  const sum=deler.reduce((a,d)=>a+d.n,0) || 1;
+  return h("div",{class:"stabel","aria-hidden":"true"},
+    deler.filter(d=>d.n>0).map(d=>h("i",{style:`width:${100*d.n/sum}%;background:${d.farge}`})));
+}
+
 function renderSummary(){
   const mine=hyps.filter(ferdigVurdert).length;
-  const raters=Object.values(allRates()).filter(r=>r&&Object.keys(r).length).length;
-  const first=hyps.filter(x=>statsFor(x.id).first);
-  const utenEier=first.filter(x=>!x.eier).length;
-  const pct=hyps.length?Math.round(100*mine/hyps.length):0;
+  const totalt=hyps.length;
+  const inviterte=deltakereTotalt||0;
+  const harVurdert=deltakereVurdert||0;
 
-  const kpi=(cls,n,t,extra,onclick)=>{
-    const inner=h("div",{},h("div",{class:"n"},n),h("div",{class:"t"},t),extra||null);
-    return h("div",{class:"kpi"+(cls?" "+cls:"")}, onclick?h("button",{type:"button",onclick},inner):inner);
+  /* Haster og uenighet er avledet av vurderingene. Er runden lukket, finnes
+     ikke tallene — og da skal kortet si det, ikke vise null. */
+  const tallSynlig = hyps.some(visTall) || visning==="apent";
+  const first=hyps.filter(x=>visTall(x)&&statsFor(x.id).first);
+  const uenige=hyps.filter(x=>visTall(x)&&statsFor(x.id).split).length;
+  const utenEier=first.filter(x=>!x.eier).length;
+  const utenGrunnlag=levSortert().filter(d=>!hyps.some(x=>x.leveranse===d.slug));
+  const avklart=hyps.filter(erAvklart).length;
+
+  const kort=(o)=>{
+    const inner=h("div",{},
+      h("div",{class:"hd"},o.hd),
+      o.ring
+        ? h("div",{class:"rad"}, h("div",{}, h("div",{class:"n"},...o.n), o.sub?h("div",{class:"sub"},o.sub):null), o.ring)
+        : h("div",{}, h("div",{class:"n"},...o.n), o.sub?h("div",{class:"sub"},o.sub):null),
+      o.viz||null);
+    return h("div",{class:"kpi"+(o.cls?" "+o.cls:"")},
+      o.onclick?h("button",{type:"button",onclick:o.onclick},inner):inner);
   };
+
   $("summary").replaceChildren(
-    kpi("",hyps.length,"hypoteser",null,()=>{filter="alle";query="";$("q").value="";render();}),
-    kpi("me",`${mine} / ${hyps.length}`,"du har vurdert",
-      h("div",{class:"bar"},h("i",{style:`width:${pct}%`})),
-      ()=>{filter="uvurdert";render();}),
-    kpi("",raters,"deltakere har vurdert"),
-    kpi("hot",first.length,"må avklares",null,()=>{filter="forst";render();}),
-    utenEier
-      ? kpi("warn",utenEier,"av dem mangler eier",null,()=>{filter="uteneier";render();})
-      : kpi("",hyps.filter(x=>statsFor(x.id).split).length,"det er uenighet om",null,()=>{filter="uenige";render();})
+    kort({hd:"Registeret", n:[String(totalt)],
+      sub:`fordelt på ${levSortert().length} leveranser`,
+      viz:kpiStabel(levSortert().map(d=>({n:hyps.filter(x=>x.leveranse===d.slug).length, farge:lcolor(d.slug)}))),
+      onclick:()=>{filter="alle";query="";$("q").value="";render();}}),
+
+    kort({hd:"Din framdrift", n:[String(mine),h("s",{},"/ "+totalt)],
+      sub: mine===totalt&&totalt ? "du er ferdig" : `${totalt-mine} gjenstår`,
+      ring:kpiRing(totalt?mine/totalt:0),
+      onclick:()=>{filter="uvurdert";render();}}),
+
+    kort({hd:"Rommet", n:[String(harVurdert),h("s",{},"av "+(inviterte||"–"))],
+      sub: inviterte ? (harVurdert>=inviterte ? "alle har bidratt"
+            : `${inviterte-harVurdert} har ikke stemt ennå`) : "deltakere",
+      viz:kpiPrikker(harVurdert, inviterte)}),
+
+    tallSynlig
+      ? kort({cls:"hot", hd:"Må avklares", n:[String(first.length)],
+          sub: first.length ? "kritisk og usikker samtidig" : "ingen i øvre høyre felt",
+          viz:h("div",{class:"bar"},h("i",{style:`width:${totalt?100*first.length/totalt:0}%`})),
+          onclick:()=>{filter="forst";render();}})
+      : kort({cls:"rolig", hd:"Må avklares", n:["Skjult"],
+          sub:"åpnes når vurderingsrunden er ferdig"}),
+
+    /* Rekkefølgen er en prioritering: en leveranse uten grunnlag er verre enn
+       en hypotese uten eier, som igjen er verre enn uenighet. Kortet viser det
+       alvorligste som faktisk gjelder nå. */
+    utenGrunnlag.length
+      ? kort({cls:"warn", hd:"Uten grunnlag", n:[String(utenGrunnlag.length)],
+          sub:utenGrunnlag.map(d=>"L"+d.nr).join(", ")+" har ingen hypoteser",
+          viz:kpiStabel(levSortert().map(d=>({n:1,
+            farge:hyps.some(x=>x.leveranse===d.slug)?lcolor(d.slug):"var(--sunk)"})))})
+      : utenEier
+        ? kort({cls:"warn", hd:"Mangler eier", n:[String(utenEier),h("s",{},"av "+first.length)],
+            sub:"av dem som må avklares",
+            viz:h("div",{class:"bar"},h("i",{style:`width:${first.length?100*utenEier/first.length:0}%`})),
+            onclick:()=>{filter="uteneier";render();}})
+        : tallSynlig
+          ? kort({hd:"Uenighet", n:[String(uenige)],
+              sub:uenige?"rommet er delt om disse":"ingen tydelig splittelse",
+              viz:h("div",{class:"bar"},h("i",{style:`width:${totalt?100*uenige/totalt:0}%`})),
+              onclick:()=>{filter="uenige";render();}})
+          : kort({hd:"Avklart", n:[String(avklart),h("s",{},"av "+totalt)],
+              sub:"bekreftet eller avkreftet",
+              viz:h("div",{class:"bar"},h("i",{style:`width:${totalt?100*avklart/totalt:0}%`}))})
   );
 }
 
@@ -1471,7 +1585,12 @@ async function refresh(){
     visning=b.resultatvisning||"etter_stemme";
     tellinger={};
     for(const t of b.tellinger||[]) tellinger[t.h]={n:t.n,vetIkke:t.vetIkke};
+    deltakereTotalt=b.deltakere_totalt||0;
+    deltakereVurdert=b.deltakere_vurdert||0;
     $("til-backend").hidden=!erAdmin;
+    /* Storskjermen er fasilitatorens verktøy, ikke deltakerens. Den som trykker
+       den på sin egen PC mister kontrollene og lurer på hva som skjedde. */
+    $("scene").hidden=!erAdmin;
     const nextRates={};
     for(const r of b.ratings||[]){ (nextRates[r.p] ||= {})[r.h]={k:r.k,u:r.u}; }
     lastSync=Date.now(); setLive(true); loaded=true;
@@ -1479,7 +1598,8 @@ async function refresh(){
 
     /* Hopp over rendering når ingenting er endret. Ellers bygges hele lista på
        nytt hvert fjerde sekund, med flimmer og tapt fokus som resultat. */
-    const sig=JSON.stringify([nextHyps,b.leveranser,nextRates,b.tellinger,visning]);
+    const sig=JSON.stringify([nextHyps,b.leveranser,nextRates,b.tellinger,visning,
+                              deltakereTotalt,deltakereVurdert]);
     if(sig===lastSig && !pendingRate.size) return;
     lastSig=sig;
 
@@ -1773,9 +1893,7 @@ function sceneBytt(){
   if(!document.body.classList.contains("scene")) return;
   const fund=document.body.classList.toggle("fund");
   skjulHover();
-  $("scene-nav").textContent = fund
-    ? "Fundament — ← → for matrisen"
-    : "Matrise — ← → for fundamentet";
+  $("scene-bytt").textContent = fund ? "← Vis matrisen" : "Vis fundamentet →";
   render();
 }
 addEventListener("keydown",e=>{
@@ -1786,6 +1904,7 @@ addEventListener("keydown",e=>{
   if(document.activeElement && document.activeElement.classList.contains("pt")) return;
   e.preventDefault(); sceneBytt();
 });
+$("scene-bytt").addEventListener("click",sceneBytt);
 $("fundament").addEventListener("click",sceneBytt);
 $("chart").addEventListener("dblclick",()=>{ if(document.body.classList.contains("scene")) sceneBytt(); });
 document.addEventListener("keydown",e=>{
@@ -1847,7 +1966,10 @@ $("exp-md").addEventListener("click",()=>{
   const seksjon=(tittel,ingress,r,kol,tom)=>
     ["",`## ${tittel}`,"",ingress,"", r.length?tabell(r,kol):tom].join("\n");
 
-  const deltakere=Object.values(allRates()).filter(r=>r&&Object.keys(r).length).length;
+  /* Teller fra databasen, ikke fra radene vi har fått: i lukket modus ser
+     klienten bare sine egne, og eksporten ville påstått at én person har
+     vurdert alt. */
+  const deltakere=deltakereVurdert||Object.values(allRates()).filter(r=>r&&Object.keys(r).length).length;
   const avkreftet = velg(x=>x.rastatus==="avkreftet");
   const avklares  = velg(x=>x.forst==="Ja");
   const grunnlag  = velg(x=>x.kk!=null&&x.uu!=null&&x.kk>MIDT&&x.uu<=MIDT);

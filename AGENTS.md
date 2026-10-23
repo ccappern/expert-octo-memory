@@ -200,6 +200,18 @@ console.log("OK")'
 - **Hypoteser slettes aldri, de arkiveres** (`deleted_at`). En ekte `delete` tar med seg alle
   vurderingene via cascade, og det finnes ingen angreknapp midt i en workshop.
 
+## Tall som gjelder rommet telles i databasen
+
+Antall deltakere som har vurdert kan ikke telles fra radene klienten har fått. I `lukket`
+modus ser klienten bare sine egne vurderinger, og ville alltid rapportert én. `get_board`
+sender derfor `deltakere_totalt` og `deltakere_vurdert` ferdig talt. Samme felle gjelder
+`.md`-eksporten.
+
+## Storskjermen er for fasilitator
+
+Knappen vises bare for administratorer. En deltaker som trykker den på sin egen PC mister
+alle kontrollene og forstår ikke hvorfor.
+
 ## Storskjermen har to bilder
 
 `scene`-modus viser matrisen og **fundamentet**, og du blar mellom dem med piltastene.

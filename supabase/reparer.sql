@@ -284,6 +284,8 @@ begin
     'meg', v_pid,
     'admin', coalesce((select admin from public.participants where id = v_pid), false),
     'resultatvisning', v_modus,
+    'deltakere_totalt', (select count(*) from public.participants
+                          where workshop_id = v_ws and epost is not null),
     'leveranser', coalesce((
       select json_agg(json_build_object(
         'slug', d.slug, 'nr', d.nr, 'label', d.label,
@@ -306,8 +308,6 @@ begin
       left join public.participants sp on sp.id = h.status_av
       where h.workshop_id = v_ws and h.deleted_at is null), '[]'::json),
 
-    -- Tellingene er bevisst skilt fra radene. De skal kunne vises også når
-    -- verdiene holdes tilbake, og de røper ingen retning.
     'tellinger', coalesce((
       select json_agg(json_build_object(
         'h', h.id,
@@ -318,8 +318,6 @@ begin
       from public.hypotheses h
       where h.workshop_id = v_ws and h.deleted_at is null), '[]'::json),
 
-    -- Egne vurderinger slipper alltid gjennom: du skal kunne se hva du selv
-    -- har svart, uansett modus.
     'ratings', coalesce((
       select json_agg(json_build_object('h', r.hypothesis_id, 'p', r.participant_id, 'k', r.k, 'u', r.u))
       from public.ratings r join public.hypotheses h on h.id = r.hypothesis_id
@@ -332,7 +330,15 @@ begin
                  where meg.hypothesis_id = r.hypothesis_id
                    and meg.participant_id = v_pid
                    and meg.k is not null and meg.u is not null))
-        )), '[]'::json)
+        )), '[]'::json),
+
+    -- Hvor mange som har avgitt minst én vurdering. Hentes her og ikke i
+    -- klienten, fordi klienten i lukket modus bare ser sine egne rader og
+    -- dermed alltid ville talt én.
+    'deltakere_vurdert', (
+      select count(distinct r.participant_id)
+        from public.ratings r join public.hypotheses h on h.id = r.hypothesis_id
+       where h.workshop_id = v_ws and h.deleted_at is null)
   );
 end $$;
 

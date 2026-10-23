@@ -226,6 +226,12 @@ with sjekk(nr, hva, ok) as (values
       where n.nspname='public' and p.proname='get_board'
         and pg_get_functiondef(p.oid) like '%''by'', p.name%')),
 
+  ('0020', 'get_board leverer deltakertall', exists(
+     select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+      where n.nspname='public' and p.proname='get_board'
+        and pg_get_functiondef(p.oid) like '%deltakere_totalt%'
+        and pg_get_functiondef(p.oid) like '%deltakere_vurdert%')),
+
   ('0017', 'get_board leverer leveranse og admin-flagg', exists(
      select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
       where n.nspname='public' and p.proname='get_board'
