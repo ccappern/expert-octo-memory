@@ -226,6 +226,11 @@ der grunnlaget mangler. Samme regel gjelder Confluence-siden.
 Haste- og uenighetsmarkørene er avledet av vurderingene og følger `resultatvisning`.
 Dekningen (avklart / vurdert / uvurdert) vises alltid, fordi den ikke røper noen retning.
 
+Fundamentet tar hele bredden: `«Må avklares»` skjules mens det vises, fordi åtte søyler på
+seksti prosent av skjermen gir steiner som ikke kan leses fra bakerste rad. Tegnforklaringen
+ligger **inne i svg-en**, ikke som html ved siden av — da skalerer den med bildet og følger
+med når noen limer et skjermbilde av projektoren inn i et referat.
+
 ## Publisering
 
 GitHub Pages fra `main` / `(root)`. `.nojekyll` ligger der for at filer med understrek skal

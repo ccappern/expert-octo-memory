@@ -319,6 +319,14 @@ body.scene{font-size:17px}
 #fundament{display:none}
 body.scene.fund #fundament{display:block;width:100%;height:auto}
 body.scene.fund #chart,body.scene.fund .legend,body.scene.fund #unrated{display:none!important}
+/* Fundamentet skal ha hele skjermen. I tospaltet storskjerm fikk det rundt
+   seksti prosent av bredden, og med åtte søyler ble steinene for smale til at
+   tallene kunne leses fra bakerste rad. «Må avklares» står i matrisevisningen
+   og kommer tilbake når du blar tilbake. */
+body.scene.fund .col-side{grid-template-columns:minmax(0,1fr)}
+body.scene.fund #tasks-pane{display:none!important}
+body.scene.fund .pane{padding:10px 14px}
+body.scene.fund main.wrap{max-width:none;padding-left:18px;padding-right:18px}
 .scene-nav{display:none}
 body.scene .scene-nav{display:flex;justify-content:center;align-items:center;gap:12px;margin:10px 0 0}
 body.scene .scene-nav span{color:var(--muted);font-size:13.5px}
@@ -421,14 +429,14 @@ body.scene header.top{min-height:52px}
 
       <aside class="col-side">
         <div class="pane">
-          <h3>Matrise <span class="c" id="mx-c"></span><span class="spacer"></span>
+          <h3><span id="pane-tittel">Matrise</span> <span class="c" id="mx-c"></span><span class="spacer"></span>
             <span class="modes" id="mx-modes" role="group" aria-label="Visning">
               <button class="mode" type="button" data-mode="snitt" aria-pressed="true">Alles snitt</button>
               <button class="mode" type="button" data-mode="min" aria-pressed="false">Min vurdering</button>
             </span>
           </h3>
           <svg id="chart" viewBox="0 0 420 420" role="img" aria-label="Matrise: kritikalitet mot usikkerhet"></svg>
-          <svg id="fundament" viewBox="0 0 1000 560" role="img"
+          <svg id="fundament" viewBox="0 0 1000 600" role="img"
                aria-label="Fundament: hypotesenes dekning per leveranse"></svg>
           <div class="scene-nav"><button type="button" id="scene-bytt">Vis fundamentet →</button>
             <span>eller bruk ← →</span></div>
@@ -1444,7 +1452,7 @@ function renderDetail(){
    tomme søylene med vilje, i stedet for å hoppes over. */
 function renderFundament(){
   const sv=$("fundament"); if(!sv) return;
-  const W=1000, H=560, T=92, B=108;          // bjelke oppe, etiketter nede
+  const W=1000, H=600, T=132, B=108;        // forklaring og bjelke oppe, etiketter nede
   const golv=H-B, tak=T;
   const levs=levSortert();
   sv.replaceChildren();
@@ -1461,6 +1469,8 @@ function renderFundament(){
      Uten taket ville to hypoteser gitt klosser så store at de leses som noe
      annet enn de ti ved siden av. */
   const sH=Math.min(34,(golv-tak-26)/maks), sG=Math.max(2,sH*0.13);
+
+  fundLegend(sv, W);
 
   // bjelken alt hviler på
   sv.append(s_("rect",{x:40,y:tak-30,width:W-80,height:30,rx:5,fill:"var(--sunk)",
@@ -1522,6 +1532,39 @@ function renderFundament(){
         fill:"var(--ink)"},linje));
     sv.append(s_("text",{x:midt,y:golv+B-14,"text-anchor":"middle","font-size":"12",fill:"var(--muted)"},
       g.hyp.length?`${g.hyp.length} · ${avkl} avklart${uvur?` · ${uvur} uvurdert`:""}`:"mangler grunnlag"));
+  });
+}
+
+/* Tegnforklaringen ligger INNE i svg-en, ikke som html ved siden av. Da
+   skalerer den med bildet, og den følger med når noen tar et skjermbilde av
+   projektoren og limer det inn i et referat. */
+function fundLegend(sv, W){
+  const b=18, y=30, biter=[
+    {t:"Avklart",      tegn:g=>g.append(s_("rect",{x:"0",y:"0",width:String(b),height:String(b),rx:"3",
+       fill:"var(--muted)"}))},
+    {t:"Vurdert",      tegn:g=>g.append(s_("rect",{x:"0",y:"0",width:String(b),height:String(b),rx:"3",
+       fill:"var(--muted)","fill-opacity":".4",stroke:"var(--muted)","stroke-width":"1.5"}))},
+    {t:"Ikke vurdert", tegn:g=>g.append(s_("rect",{x:"0",y:"0",width:String(b),height:String(b),rx:"3",
+       fill:"none",stroke:"var(--muted)","stroke-width":"1.5","stroke-dasharray":"5 4"}))},
+    {t:"Må avklares",  tegn:g=>{g.append(s_("rect",{x:"3",y:"0",width:String(b-3),height:String(b),rx:"3",
+       fill:"var(--muted)","fill-opacity":".25",stroke:"var(--muted)","stroke-width":"1.5"}));
+       g.append(s_("rect",{x:"0",y:"0",width:"3",height:String(b),fill:"var(--bad)"}));}},
+    {t:"Uenighet",     tegn:g=>{g.append(s_("rect",{x:"0",y:"0",width:String(b),height:String(b),rx:"3",
+       fill:"var(--muted)","fill-opacity":".25",stroke:"var(--muted)","stroke-width":"1.5"}));
+       g.append(s_("circle",{cx:String(b-4),cy:"4",r:"4",fill:"var(--warn)",
+         stroke:"var(--surface)","stroke-width":"1.5"}));}},
+    {t:"Mangler grunnlag", tegn:g=>g.append(s_("rect",{x:"0",y:"0",width:String(b),height:String(b),rx:"3",
+       fill:"none",stroke:"var(--muted)","stroke-width":"2","stroke-dasharray":"7 6",opacity:".65"}))}
+  ];
+  /* Bredden anslås fra tegnlengden. Et eksakt mål krever at elementet allerede
+     er i dokumentet, og da ville forklaringen hoppet på plass etter tegning. */
+  const bredder=biter.map(d=>b+8+d.t.length*7.3+26);
+  let x=(W-bredder.reduce((a,c)=>a+c,0))/2;
+  biter.forEach((d,i)=>{
+    const g=s_("g",{transform:`translate(${x.toFixed(1)},${y})`});
+    d.tegn(g);
+    g.append(s_("text",{x:String(b+8),y:String(b-4),"font-size":"13.5",fill:"var(--muted)"},d.t));
+    sv.append(g); x+=bredder[i];
   });
 }
 
@@ -1894,6 +1937,7 @@ function sceneBytt(){
   const fund=document.body.classList.toggle("fund");
   skjulHover();
   $("scene-bytt").textContent = fund ? "← Vis matrisen" : "Vis fundamentet →";
+  $("pane-tittel").textContent = fund ? "Dekning per leveranse" : "Matrise";
   render();
 }
 addEventListener("keydown",e=>{
