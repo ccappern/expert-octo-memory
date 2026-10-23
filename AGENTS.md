@@ -229,6 +229,11 @@ mellom leveransene til et mål i seg selv. Hver leveranse må uansett bære sin 
 beslutningen. Det som varierer er hvor *solid* søylen er — steinhøyden er søylehøyden
 delt på antall hypoteser.
 
+Hover-kortet i storskjerm **gjenbrukes** når markøren går fra ett punkt til et annet: bare
+innholdet byttes, sløret bak blir stående. Rives kortet ned og bygges opp igjen, forsvinner
+og kommer sløret tilbake mellom hvert punkt, og det leses som blinking. Lukkingen er dessuten
+forsinket 160 ms, fordi punktene ligger tett og markøren passerer bar flate mellom dem.
+
 Haste- og uenighetsmarkørene er avledet av vurderingene og følger `resultatvisning`.
 Dekningen (avklart / vurdert / uvurdert) vises alltid, fordi den ikke røper noen retning.
 

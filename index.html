@@ -261,8 +261,19 @@ select.status{border:1px solid var(--line);background:var(--bg);border-radius:7p
    kunne klikke seg videre. Der er IDen alene ubrukelig — hele hypotesen vises
    i stedet. Kortet tar ikke mot mus, så pointerleave på punktet fortsetter å
    virke og kortet lukker seg selv når du peker bort. */
+/* Sløret tones inn, og er lysere enn før. Matrisen er en lys flate, og et
+   halvsvart slør som slås på momentant leses som et glimt. */
 .mx-modal{position:fixed;inset:0;z-index:30;pointer-events:none;
-  display:grid;place-items:center;padding:28px;background:rgba(0,0,0,.5)}
+  display:grid;place-items:center;padding:28px;background:rgba(0,0,0,.36);
+  animation:slorInn .18s ease-out}
+@keyframes slorInn{from{background:rgba(0,0,0,0)}to{background:rgba(0,0,0,.36)}}
+/* Innholdet byttes mens sløret blir stående. Et kort anslag gjør at øyet
+   oppfatter at teksten er NY, uten at flaten rundt beveger seg. */
+.mx-modal .box{animation:kortInn .16s ease-out}
+@keyframes kortInn{from{opacity:.45}to{opacity:1}}
+@media (prefers-reduced-motion: reduce){
+  .mx-modal,.mx-modal .box{animation:none}
+}
 .mx-modal .box{background:var(--surface);border:1px solid var(--line);
   border-radius:14px;padding:26px 30px;max-width:760px;
   box-shadow:0 16px 48px rgba(0,0,0,.3)}
@@ -1071,20 +1082,44 @@ function mxTegnSnart(){
    visning det står i, det melder bare fra at markøren er over. */
 let hoverEl=null, hoverId=null, hoverPin=false;
 function skjulHover(){
+  clearTimeout(hoverT); hoverT=null;
   if(hoverEl){ hoverEl.remove(); hoverEl=null; }
   hoverId=null; hoverPin=false;
+}
+/* Punktene ligger tett, og mellom dem er det noen få piksler bar flate. Uten
+   denne nåden rakk kortet å forsvinne og komme tilbake hver gang markøren
+   passerte en glipe. Kommer et nytt punkt innen fristen, avbrytes lukkingen. */
+let hoverT=null;
+function skjulHoverSnart(){
+  clearTimeout(hoverT);
+  hoverT=setTimeout(()=>{ hoverT=null; skjulHover(); }, 160);
 }
 /* pin=true kommer fra et klikk. Et festet kort viker ikke for hover: i
    storskjerm står den som presenterer gjerne og snakker mens markøren sklir
    videre, og kortet skal ikke forsvinne av den grunn. */
 function visHover(p, g, pin){
+  clearTimeout(hoverT); hoverT=null;                      // avbryt en lukking på vei
   if(dragId) return;                                      // under draging flytter punktet seg
   if(hoverPin && !pin) return;                            // festet kort eier flaten
   if(hoverId===p.x.id && hoverEl && !pin) return;         // står allerede oppe
+  const storskjerm = document.body.classList.contains("scene");
+
+  /* Glir du fra ett punkt til et nabopunkt, byttes BARE innholdet. Før ble
+     hele kortet revet ned og bygget opp igjen, og da forsvant og kom sløret
+     bak tilbake mellom hvert punkt — det leste som blinking, ikke som at
+     kortet fulgte markøren. */
+  if(storskjerm && hoverEl && hoverEl.classList.contains("mx-modal")){
+    if(pin) hoverPin=true;
+    hoverEl.replaceChildren(...hoverKort(p,hoverPin).childNodes);
+    hoverEl.classList.toggle("festet", hoverPin);
+    hoverId=p.x.id;
+    return;
+  }
+
   if(hoverEl){ hoverEl.remove(); hoverEl=null; }
   hoverId=p.x.id;
   if(pin) hoverPin=true;
-  hoverEl = document.body.classList.contains("scene") ? hoverKort(p,hoverPin) : hoverTip(p,g);
+  hoverEl = storskjerm ? hoverKort(p,hoverPin) : hoverTip(p,g);
   document.body.append(hoverEl);
 }
 /* Festet til punktets egen boks og ikke til markøren: med snapping flytter
@@ -1240,9 +1275,9 @@ function renderMatrix(){
     /* Focus/blur er med for at tastaturbruk skal gi samme opplysning som mus —
        punktene er allerede tabbbare. */
     g.addEventListener("pointerenter",()=>visHover(p,g));
-    g.addEventListener("pointerleave",()=>{ if(!hoverPin) skjulHover(); });
+    g.addEventListener("pointerleave",()=>{ if(!hoverPin) skjulHoverSnart(); });
     g.addEventListener("focus",()=>visHover(p,g));
-    g.addEventListener("blur",()=>{ if(!hoverPin) skjulHover(); });
+    g.addEventListener("blur",()=>{ if(!hoverPin) skjulHoverSnart(); });
     g.addEventListener("keydown",e=>{
       if(e.key==="Enter"||e.key===" "){ e.preventDefault(); velg(); return; }
       if(!flyttbar) return;
@@ -1515,9 +1550,9 @@ function renderFundament(){
       const pk={x:x2,k:st.k,u:st.u,vetIkke:st.vetIkke,split:visTall(x2)&&st.split,
                 skjult:!visTall(x2),antall:antallVurdert(x2.id)};
       st2.addEventListener("pointerenter",()=>visHover(pk,st2));
-      st2.addEventListener("pointerleave",()=>{ if(!hoverPin) skjulHover(); });
+      st2.addEventListener("pointerleave",()=>{ if(!hoverPin) skjulHoverSnart(); });
       st2.addEventListener("focus",()=>visHover(pk,st2));
-      st2.addEventListener("blur",()=>{ if(!hoverPin) skjulHover(); });
+      st2.addEventListener("blur",()=>{ if(!hoverPin) skjulHoverSnart(); });
       st2.addEventListener("click",e=>{
         e.stopPropagation();
         if(hoverPin && hoverId===x2.id) skjulHover(); else visHover(pk,st2,true);
