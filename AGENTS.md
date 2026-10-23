@@ -200,6 +200,20 @@ console.log("OK")'
 - **Hypoteser slettes aldri, de arkiveres** (`deleted_at`). En ekte `delete` tar med seg alle
   vurderingene via cascade, og det finnes ingen angreknapp midt i en workshop.
 
+## Storskjermen har to bilder
+
+`scene`-modus viser matrisen og **fundamentet**, og du blar mellom dem med piltastene.
+De svarer på hver sin ting, og skal ikke slås sammen: matrisen sier hva som haster,
+fundamentet sier om beslutningen hviler på noe i det hele tatt.
+
+I fundamentet er hver leveranse en søyle og hver hypotese en stein. **Tomme leveranser
+tegnes med vilje**, som stiplede søyler under bjelken — en leveranse uten hypoteser er
+det kraftigste signalet siden kan gi, og hoppes den over, ser bildet komplett ut nettopp
+der grunnlaget mangler. Samme regel gjelder Confluence-siden.
+
+Haste- og uenighetsmarkørene er avledet av vurderingene og følger `resultatvisning`.
+Dekningen (avklart / vurdert / uvurdert) vises alltid, fordi den ikke røper noen retning.
+
 ## Publisering
 
 GitHub Pages fra `main` / `(root)`. `.nojekyll` ligger der for at filer med understrek skal

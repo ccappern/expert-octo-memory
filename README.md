@@ -259,6 +259,7 @@ kritikalitet.
 - `supabase/migrations/0016_invitasjonsliste.sql` – de 21 inviterte, og sammenslåing av dupliserte deltakere *(ikke i repoet)*
 - `supabase/migrations/0017_backend_og_leveranser.sql` – leveransene erstatter typene, backend for prosjektledelsen, kladd avvikles *(ikke i repoet: utpeker administratorene ved e-post)*
 - `supabase/migrations/0018_resultatvisning.sql` – tre moduser for når gruppens tall vises, håndhevet i databasen
+- `supabase/migrations/0019_confluence_rytme.sql` – Confluence skrives ikke lenger ved hver vurdering
 - `supabase/reparer.sql` – bringer skjemaet i riktig tilstand uansett utgangspunkt
 - `supabase/sjekk_status.sql` – viser hvilke migrasjoner som er anvendt, endrer ingenting
 - `supabase/kjor.sh` – kjører de to over mot Supabase via docker

@@ -41,7 +41,7 @@ type Hyp = {
   leveranse: string | null; leveranse_2: string | null;
   kilde: string; eier: string; frist: string | null;
   status_notat: string; status_endret: string | null; status_av: string | null;
-  by: string | null; created_at: string;
+  created_at: string;
 };
 type Lev = { slug: string; nr: number; label: string };
 type Rate = { hypothesis_id: string; participant_id: string; k: number | null; u: number | null };
@@ -235,7 +235,7 @@ function byggSide(hyps: Hyp[], rates: Rate[], levs: Lev[]) {
     uvurdert.length ? seksjon("Ikke vurdert ennå",
       "Mangler vurdering på minst én akse og er derfor ikke plassert.",
       uvurdert, [K.krit, K.eier, K.frist], "") : "",
-    alleTabell(rader),
+    alleTabell(rader, levs),
   ].filter(Boolean).join("\n");
 
   const enkelt = (s: string) => `<ac:layout-section ac:type="single"><ac:layout-cell>${s}</ac:layout-cell></ac:layout-section>`;
@@ -246,9 +246,9 @@ function byggSide(hyps: Hyp[], rates: Rate[], levs: Lev[]) {
  *  leveranse uten evidens skal være synlig som et hull, ikke drukne i en lang
  *  liste. Individuelle vurderinger er ikke med — bare snitt, antall og
  *  uenighetsflagget. */
-function alleTabell(rader: Rad[]) {
+function alleTabell(rader: Rad[], levs: Lev[]) {
   const hode = ["Nr", "Vi tror at", "Vi vet det når", "Status", "Belegg", "Avklart",
-    "Eier", "Frist", "Kritisk", "Usikker", "Usikker vurdert", "Vurderinger", "Vet ikke", "Uenige", "Kilde", "Lagt inn av"];
+    "Eier", "Frist", "Kritisk", "Usikker", "Usikker vurdert", "Vurderinger", "Vet ikke", "Uenige", "Kilde"];
   const rad = (r: Rad) => `<tr><td>${esc(nr(r.nr))}</td>` +
     `<td>${avsnitt(r.tekst)}</td><td>${avsnitt(r.kriterium)}</td>` +
     `<td>${esc(STATUS[r.status] ?? r.status)}</td><td>${avsnitt(r.status_notat)}</td>` +
@@ -256,9 +256,14 @@ function alleTabell(rader: Rad[]) {
     `<td>${esc(r.eier)}</td><td>${esc(dato(r.frist))}</td>` +
     `<td>${tall(r.k)}</td><td>${tall(r.u)}</td><td>${tall(r.uRaa)}</td>` +
     `<td>${r.n}</td><td>${r.vetIkke || ""}</td><td>${r.uenig ? "Ja" : ""}</td>` +
-    `<td>${avsnitt(r.kilde)}</td><td>${esc(r.by ?? "")}</td></tr>`;
+    `<td>${avsnitt(r.kilde)}</td></tr>`;
 
   const grupper = new Map<string, { nr: number; label: string; rader: Rad[] }>();
+  // Alle leveransene legges inn FØR hypotesene fordeles, slik at de tomme blir
+  // stående. En leveranse uten en eneste hypotese er det kraftigste signalet
+  // siden kan gi — hoppes den over, ser rapporten komplett ut nettopp der
+  // grunnlaget mangler helt.
+  for (const l of levs) grupper.set(`${l.nr}|${l.label}`, { nr: l.nr, label: l.label, rader: [] });
   for (const r of rader) {
     // Nøkkelen tar med labelen: en hypotese kan peke på en leveranse som er
     // slettet fra lista, og den skal ikke smelte sammen med «Uten leveranse».
@@ -269,9 +274,13 @@ function alleTabell(rader: Rad[]) {
   }
   const deler = [...grupper.values()]
     .sort((a, b) => a.nr - b.nr || a.label.localeCompare(b.label, "nb"))
-    .map((g) => `<h3>${esc(g.label)}</h3>` +
-      `<table><tbody><tr>${hode.map((h) => `<th>${esc(h)}</th>`).join("")}</tr>` +
-      g.rader.map(rad).join("") + `</tbody></table>`);
+    .map((g) =>
+      `<h3>${esc(g.label)}</h3>` +
+      (g.rader.length
+        ? `<table><tbody><tr>${hode.map((h) => `<th>${esc(h)}</th>`).join("")}</tr>` +
+          g.rader.map(rad).join("") + `</tbody></table>`
+        : `<p><strong>Ingen hypoteser er koblet til denne leveransen.</strong> ` +
+          `Det betyr at ingenting i registeret underbygger den ennå.</p>`));
 
   return `<h2>Alle hypoteser</h2><p>Hele registeret samlet, gruppert etter leveransen ` +
     `hypotesen hører til. «Usikker» er overstyrt til 1 for avklarte hypoteser; ` +
@@ -297,7 +306,7 @@ Deno.serve(async (req) => {
   }
 
   const { data: hyps, error: e1 } = await sb.from("hypotheses")
-    .select("id, nr, tekst, kriterium, type, leveranse, leveranse_2, status, kilde, eier, frist, status_notat, status_endret, status_av, created_by, created_at")
+    .select("id, nr, tekst, kriterium, leveranse, leveranse_2, status, kilde, eier, frist, status_notat, status_endret, status_av, created_at")
     .is("deleted_at", null)
     // Kladd er personlig og har ikke engang fått nummer ennå. Den hører ikke
     // hjemme på en side resten av prosjektet leser.
@@ -310,13 +319,15 @@ Deno.serve(async (req) => {
   const { data: levs, error: e3 } = await sb.from("deliverables").select("slug, nr, label").order("nr");
   if (e3) return Response.json({ ok: false, steg: "les leveranser", feil: e3.message }, { status: 500 });
 
+  // Navnene brukes bare til å vise hvem som avklarte en status. Hvem som la
+  // inn hypotesen publiseres ikke: registeret vedlikeholdes fra backend, og
+  // forfatteren er verken relevant eller noe leserne skal forholde seg til.
   const { data: deltakere } = await sb.from("participants").select("id, name");
   const navn = new Map((deltakere ?? []).map((p: { id: string; name: string }) => [p.id, p.name]));
 
   const levende = new Set((hyps ?? []).map((h: { id: string }) => h.id));
   const rader = (hyps ?? []).map((h: Record<string, unknown>) => ({
     ...h,
-    by: navn.get(String(h.created_by)) ?? null,
     status_av: h.status_av ? (navn.get(String(h.status_av)) ?? null) : null,
   })) as Hyp[];
 

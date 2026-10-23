@@ -284,6 +284,14 @@ body.scene .summary, body.scene .col-main, body.scene #detail,
 body.scene #mx-modes, body.scene #mx-tray, body.scene #mx-pending,
 body.scene .top-actions > *:not(#scene){display:none!important}
 body.scene{font-size:17px}
+/* Fundamentet er bare for storskjerm. På en laptop ville søylene blitt for
+   smale til å skille steinene fra hverandre, og da sier bildet ingenting. */
+#fundament{display:none}
+body.scene #fundament{display:block;width:100%;height:auto}
+body.scene.fund #chart,body.scene.fund .legend,body.scene.fund #unrated{display:none!important}
+body.scene:not(.fund) #fundament{display:none}
+.scene-nav{display:none}
+body.scene .scene-nav{display:block;text-align:center;color:var(--muted);font-size:14px;margin:6px 0 0}
 body.scene .cols{grid-template-columns:minmax(0,1fr);gap:0}
 body.scene .col-side{position:static;max-height:none;overflow:visible;
   grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:20px;align-items:start}
@@ -387,6 +395,9 @@ body.scene header.top{min-height:52px}
             </span>
           </h3>
           <svg id="chart" viewBox="0 0 420 420" role="img" aria-label="Matrise: kritikalitet mot usikkerhet"></svg>
+          <svg id="fundament" viewBox="0 0 1000 560" role="img" hidden
+               aria-label="Fundament: hypotesenes dekning per leveranse"></svg>
+          <p class="scene-nav" id="scene-nav">Matrise — ← → for fundamentet</p>
           <div class="tray" id="mx-tray" hidden></div>
           <div class="pending" id="mx-pending" hidden></div>
           <div class="legend" id="legend"></div>
@@ -1310,12 +1321,117 @@ function renderDetail(){
     }},"Vis i listen"));
 }
 
+
+/* ---------- fundamentet (storskjerm) ---------- */
+/* Matrisen svarer på hva som haster. Fundamentet svarer på noe annet: hviler
+   beslutningen på noe i det hele tatt? Hver leveranse er en søyle, hver
+   hypotese en stein. En leveranse uten hypoteser blir en tom, stiplet søyle
+   under bjelken — og det er den samtalen rommet skal ta. Derfor tegnes de
+   tomme søylene med vilje, i stedet for å hoppes over. */
+function renderFundament(){
+  const sv=$("fundament"); if(!sv) return;
+  const W=1000, H=560, T=92, B=108;          // bjelke oppe, etiketter nede
+  const golv=H-B, tak=T;
+  const levs=levSortert();
+  sv.replaceChildren();
+  if(!levs.length){
+    sv.append(s_("text",{x:W/2,y:H/2,"text-anchor":"middle","font-size":"20",fill:"var(--muted)"},
+      "Ingen leveranser er definert ennå."));
+    return;
+  }
+
+  const grupper=levs.map(d=>({d, hyp:hyps.filter(x=>x.leveranse===d.slug).sort((a,b)=>a.nr-b.nr)}));
+  const maks=Math.max(1,...grupper.map(g=>g.hyp.length));
+  const gap=W/levs.length, bredde=Math.min(104,gap-22);
+  /* Steinhøyden kommer av den høyeste søylen, slik at den alltid får plass.
+     Uten taket ville to hypoteser gitt klosser så store at de leses som noe
+     annet enn de ti ved siden av. */
+  const sH=Math.min(34,(golv-tak-26)/maks), sG=Math.max(2,sH*0.13);
+
+  // bjelken alt hviler på
+  sv.append(s_("rect",{x:40,y:tak-30,width:W-80,height:30,rx:5,fill:"var(--sunk)",
+    stroke:"var(--line)","stroke-width":"1.5"}));
+  sv.append(s_("text",{x:W/2,y:tak-10,"text-anchor":"middle","font-size":"17","font-weight":"700",
+    fill:"var(--muted)","letter-spacing":".06em"},"GO / NO-GO-BESLUTNINGEN"));
+  sv.append(s_("line",{x1:30,y1:golv,x2:W-30,y2:golv,stroke:"var(--ink)","stroke-width":"2.5"}));
+
+  grupper.forEach((g,i)=>{
+    const midt=gap*i+gap/2, x=midt-bredde/2, farge=lcolor(g.d.slug);
+
+    if(!g.hyp.length){
+      /* Tom søyle tegnes i full høyde av den største, ikke som ingenting.
+         Et hull er bare synlig hvis det har en form. */
+      const h0=Math.max(70,sH*2.2);
+      sv.append(s_("rect",{x,y:golv-h0,width:bredde,height:h0,rx:4,fill:"none",
+        stroke:"var(--muted)","stroke-width":"2","stroke-dasharray":"7 6",opacity:".65"}));
+      sv.append(s_("text",{x:midt,y:golv-h0/2,"text-anchor":"middle","font-size":"13",
+        fill:"var(--muted)","font-style":"italic"},"ingen"));
+      sv.append(s_("text",{x:midt,y:golv-h0/2+17,"text-anchor":"middle","font-size":"13",
+        fill:"var(--muted)","font-style":"italic"},"hypoteser"));
+    }
+
+    g.hyp.forEach((x2,j)=>{
+      const st=statsFor(x2.id);
+      const vurdert=(antallVurdert(x2.id)||0)>0;
+      const avklart=erAvklart(x2);
+      const y=golv-(j+1)*(sH+sG)+sG;
+      /* Tre tilstander, ikke to: avklart er murt fast, vurdert men uavklart
+         ligger løst, og uvurdert er et hull i muren. Stiplet omriss leses som
+         «mangler» uten at noen trenger tegnforklaringen. */
+      sv.append(s_("rect",{x,y,width:bredde,height:sH,rx:3,
+        fill:avklart?farge:(vurdert?farge:"none"),
+        "fill-opacity":avklart?"1":(vurdert?".4":"0"),
+        stroke:vurdert||avklart?farge:"var(--muted)",
+        "stroke-width":avklart?"2":"1.5",
+        "stroke-dasharray":vurdert||avklart?null:"5 4",
+        opacity:vurdert||avklart?"1":".7"}));
+      if(sH>=15)
+        sv.append(s_("text",{x:midt,y:y+sH/2+4,"text-anchor":"middle","font-size":String(Math.min(13,sH*0.46)),
+          "font-weight":"700","font-family":"var(--f-mono)",
+          fill:avklart?"var(--surface)":"var(--ink)"},nr(x2.nr)));
+      /* Haster og uenighet er avledet av tallene, og skal ikke lekke mens
+         vurderingsrunden er lukket. */
+      if(visTall(x2) && st.split)
+        sv.append(s_("circle",{cx:x+bredde-6,cy:y+6,r:4,fill:"var(--warn)",
+          stroke:"var(--surface)","stroke-width":"1.5"}));
+      if(visTall(x2) && st.first)
+        sv.append(s_("rect",{x:x-3,y,width:3,height:sH,fill:"var(--bad)"}));
+    });
+
+    // etiketten under søylen
+    const avkl=g.hyp.filter(erAvklart).length;
+    const uvur=g.hyp.filter(x2=>(antallVurdert(x2.id)||0)===0).length;
+    sv.append(s_("text",{x:midt,y:golv+24,"text-anchor":"middle","font-size":"16","font-weight":"800",
+      fill:farge},"L"+g.d.nr));
+    for(const [k,linje] of delOpp(g.d.label,16).entries())
+      sv.append(s_("text",{x:midt,y:golv+42+k*15,"text-anchor":"middle","font-size":"12.5",
+        fill:"var(--ink)"},linje));
+    sv.append(s_("text",{x:midt,y:golv+B-14,"text-anchor":"middle","font-size":"12",fill:"var(--muted)"},
+      g.hyp.length?`${g.hyp.length} · ${avkl} avklart${uvur?` · ${uvur} uvurdert`:""}`:"mangler grunnlag"));
+  });
+}
+
+/* Bryter en etikett i linjer uten å dele ord. SVG har ingen tekstombrekking,
+   og «Juridiske og sikkerhetsmessige avklaringer» må få plass under en søyle
+   på hundre piksler. */
+function delOpp(tekst, maks){
+  const ord=String(tekst||"").split(" "), ut=[]; let linje="";
+  for(const o of ord){
+    if(!linje) linje=o;
+    else if((linje+" "+o).length<=maks) linje+=" "+o;
+    else { ut.push(linje); linje=o; }
+  }
+  if(linje) ut.push(linje);
+  return ut.slice(0,3);
+}
+
 /* ---------- render ---------- */
 function render(){
   if(!session) return;
   renderSummary();
   renderFilters();
   renderMatrix();
+  if(document.body.classList.contains("scene")) renderFundament();
   renderPending();
   renderTasks();
   renderDetail();
@@ -1637,6 +1753,9 @@ $("logout").addEventListener("click",()=>{
    en feil mens hele rommet ser på. */
 function scene(på){
   document.body.classList.toggle("scene", på);
+  /* Matrisen er alltid utgangspunktet. Den som slår på storskjerm midt i en
+     diskusjon skal få det samme bildet hver gang, ikke der forrige økt sluttet. */
+  if(!på) document.body.classList.remove("fund");
   skjulHover();   // tip og kort hører til hver sin visning
   $("scene").textContent = på ? "Avslutt storskjerm" : "Storskjerm";
   if(på && mxMode!=="snitt"){
@@ -1647,6 +1766,28 @@ function scene(på){
   render();
 }
 $("scene").addEventListener("click",()=>scene(!document.body.classList.contains("scene")));
+
+/* Bla mellom matrise og fundament. Manuelt og ikke automatisk: skjermen skal
+   ikke bytte bilde mens noen snakker til den. */
+function sceneBytt(){
+  if(!document.body.classList.contains("scene")) return;
+  const fund=document.body.classList.toggle("fund");
+  skjulHover();
+  $("scene-nav").textContent = fund
+    ? "Fundament — ← → for matrisen"
+    : "Matrise — ← → for fundamentet";
+  render();
+}
+addEventListener("keydown",e=>{
+  if(!document.body.classList.contains("scene")) return;
+  if(e.key!=="ArrowLeft" && e.key!=="ArrowRight") return;
+  /* Piltastene flytter punkter i «Min vurdering». Der er de allerede tatt, og
+     storskjermen skal ikke stjele dem. */
+  if(document.activeElement && document.activeElement.classList.contains("pt")) return;
+  e.preventDefault(); sceneBytt();
+});
+$("fundament").addEventListener("click",sceneBytt);
+$("chart").addEventListener("dblclick",()=>{ if(document.body.classList.contains("scene")) sceneBytt(); });
 document.addEventListener("keydown",e=>{
   if(e.key!=="Escape") return;
   if(hoverEl){ skjulHover(); return; }   // lukk kortet først, så storskjerm
