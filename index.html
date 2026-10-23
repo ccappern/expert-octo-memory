@@ -244,7 +244,19 @@ select.status{border:1px solid var(--line);background:var(--bg);border-radius:7p
    er 75 sekunder hver, og et kort med førti elementer bruker halvparten av den
    tiden på å finne påstanden. Spalta låses til rundt 60 tegn — det er der
    lesbarheten ligger, ikke de 90 kortene har. */
-.les{max-width:62ch;margin:0 auto;display:grid;gap:18px;padding:10px 0 40px}
+/* Leseflaten har stabil høyde, og blaknappene er forankret i bunnen. Følger
+   høyden innholdet, flytter «Neste» seg for hver hypotese — og den som blar
+   gjennom ti på rad sikter etter en knapp som ikke står stille.
+   Tekstboksen får derfor FAST høyde, ikke min-høyde: med min-høyde vokser den
+   forbi sin egen grense så snart påstanden er lang, og da flytter både
+   skalaene og knappene seg likevel. Høyden følger bare vindushøyden, aldri
+   innholdet, så alt under står i ro uansett hvilken hypotese som vises.
+   Prisen er litt luft under korte påstander — den sto uansett lenger ned. */
+.les{max-width:62ch;margin:0 auto;display:grid;gap:18px;padding:10px 0 24px;
+  min-height:min(620px, calc(100vh - 250px))}
+.les .tekst{display:grid;gap:14px;align-content:start;min-width:0;
+  height:clamp(120px, calc(100vh - 430px), 320px);overflow:auto}
+.les .bla{margin-top:auto}
 .les .hode{text-align:center;display:grid;gap:5px}
 .les .hode .id{font:600 13px/1.2 var(--f-mono);color:var(--muted);letter-spacing:.05em}
 /* Framdriften som to tall og ikke som en ring: spørsmålet er «hvor langt har
@@ -397,7 +409,7 @@ select.status{border:1px solid var(--line);background:var(--bg);border-radius:7p
 /* Storskjerm: matrisen og «Må avklares» på projektor mens rommet vurderer fra
    hver sin PC. Ingen kontroller, større tekst, og alltid alles snitt — det er
    gruppens bilde som skal vises, ikke én persons. */
-body.scene .summary, body.scene .col-main, body.scene #detail,
+body.scene .summary, body.scene .col-main, body.scene #detail, body.scene #toolbar,
 body.scene #mx-modes, body.scene #mx-tray, body.scene #mx-pending,
 body.scene .top-actions > *:not(#scene){display:none!important}
 body.scene{font-size:17px}
@@ -500,24 +512,28 @@ body.scene header.top{min-height:52px}
   <div id="app" hidden>
     <div class="summary" id="summary"></div>
 
+    <!-- Verktøylinja står UTENFOR .cols. Den styrer hvilken kolonne som vises,
+         og kan derfor ikke bo inni en av dem: i matrisevisning skjules
+         .col-main, og lå bryteren der, forsvant veien tilbake sammen med
+         lista. Da var eneste utvei å laste siden på nytt. -->
+    <div class="toolbar" id="toolbar">
+      <span class="modes" id="vis-valg" role="group" aria-label="Visning">
+        <button class="mode" type="button" data-vis="les" aria-pressed="true">Les</button>
+        <button class="mode" type="button" data-vis="liste" aria-pressed="false">Liste</button>
+        <button class="mode" type="button" data-vis="matrise" aria-pressed="false">Matrise</button>
+      </span>
+      <input class="search" id="q" type="search" placeholder="Søk i hypoteser, kriterier, eiere …" aria-label="Søk">
+      <select class="sort" id="sort" aria-label="Sortering">
+        <option value="nr">Nummer</option>
+        <option value="prio">Prioritet</option>
+        <option value="uenig">Uenighet først</option>
+        <option value="frist">Frist</option>
+      </select>
+      <div class="chips" id="filters"></div>
+    </div>
+
     <div class="cols" id="cols">
       <div class="col-main">
-        <div class="toolbar" id="toolbar">
-          <span class="modes" id="vis-valg" role="group" aria-label="Visning">
-            <button class="mode" type="button" data-vis="les" aria-pressed="true">Les</button>
-            <button class="mode" type="button" data-vis="liste" aria-pressed="false">Liste</button>
-            <button class="mode" type="button" data-vis="matrise" aria-pressed="false">Matrise</button>
-          </span>
-          <input class="search" id="q" type="search" placeholder="Søk i hypoteser, kriterier, eiere …" aria-label="Søk">
-          <select class="sort" id="sort" aria-label="Sortering">
-            <option value="nr">Nummer</option>
-            <option value="prio">Prioritet</option>
-            <option value="uenig">Uenighet først</option>
-            <option value="frist">Frist</option>
-          </select>
-          <div class="chips" id="filters"></div>
-        </div>
-
         <div id="list"></div>
         <div id="les" hidden></div>
       </div>
@@ -1375,8 +1391,13 @@ function lesHode(x, i, n, under){
     h("div",{class:"av"}, under || `${i+1} av ${n}`));
 }
 function lesBrodtekst(x){
-  return [h("p",{class:"pastand"},h("span",{class:"pre"},"Vi tror at "),x.tekst||""),
-          x.kriterium?h("p",{class:"nar"},h("span",{class:"pre"},"Vi vet det når "),x.kriterium):null];
+  /* Teksten ligger i sin egen boks med fast plass (.tekst). Uten den følger
+     skalaene og blaknappene lengden på påstanden, og da står «Neste» et nytt
+     sted for hver hypotese. Den som vurderer tjue på rad sikter etter en knapp
+     som flytter seg — og treffer feil. */
+  return h("div",{class:"tekst"},
+    h("p",{class:"pastand"},h("span",{class:"pre"},"Vi tror at "),x.tekst||""),
+    x.kriterium?h("p",{class:"nar"},h("span",{class:"pre"},"Vi vet det når "),x.kriterium):null);
 }
 function renderLesemodus(){
   const list=lesListe();
@@ -1384,7 +1405,7 @@ function renderLesemodus(){
   const x=list[lesIdx];
   return h("div",{class:"les"},
     lesHode(x, lesIdx, list.length),
-    ...lesBrodtekst(x),
+    lesBrodtekst(x),
     /* Skalaene blir stående. Å lese og vurdere i samme bevegelse er den
        naturlige flyten, og uten dem blir lesemodus en blindvei folk må ut av
        igjen for å gjøre noe. Gruppens tall vises ikke her: samme
@@ -1424,7 +1445,11 @@ function gruppeSkala(x, dim, navn, ender){
   return h("div",{class:"field"},
     h("label",{},navn," ",h("span",{class:"opt"},
       verdier.length ? `· dere fem i steg 2: ${verdier.join(", ")}` : "· ingen i gruppen rakk denne")),
-    verdier.length ? sprikLinje(verdier, lcolor(x.leveranse)) : null,
+    /* Aksen tegnes også når ingen rakk hypotesen — da uten prikker. Droppes
+       raden helt, krymper feltet med 30 px og «Neste» flytter seg mellom to
+       hypoteser i samme bunke. En tom akse sier dessuten det samme som
+       etiketten, bare raskere. */
+    sprikLinje(verdier, lcolor(x.leveranse)),
     erLeder()
       ? h("div",{class:"scale"}, gruppeSeg(x.id, dim, cur, navn), h("span",{class:"ends"},ender))
       : h("p",{class:"gr-les"},"Gruppens forslag: ",
@@ -1489,7 +1514,7 @@ function renderGruppe(){
       minGruppe.frist_tekst?h("span",{},"· "+minGruppe.frist_tekst):null,
       f?h("span",{},`· ${f.n} av ${f.av} ført`):null),
     h("p",{class:"help"},"Lag et forslag alle i gruppen kan leve med."),
-    ...lesBrodtekst(x),
+    lesBrodtekst(x),
     gruppeSkala(x,"k","Kritisk","1 merkes ikke → 10 faller"),
     gruppeSkala(x,"u","Usikker","1 dokumentert → 10 gjetning"),
     /* Hensyn bes det om bare i de to tilfellene. Ble gruppa enig med én gang
