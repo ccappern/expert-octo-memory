@@ -219,9 +219,15 @@ De svarer på hver sin ting, og skal ikke slås sammen: matrisen sier hva som ha
 fundamentet sier om beslutningen hviler på noe i det hele tatt.
 
 I fundamentet er hver leveranse en søyle og hver hypotese en stein. **Tomme leveranser
-tegnes med vilje**, som stiplede søyler under bjelken — en leveranse uten hypoteser er
+tegnes med vilje**, som stiplede søyler under planken — en leveranse uten hypoteser er
 det kraftigste signalet siden kan gi, og hoppes den over, ser bildet komplett ut nettopp
 der grunnlaget mangler. Samme regel gjelder Confluence-siden.
+
+**Alle søylene er like høye, og planken ligger vannrett.** Første utgave lot høyden følge
+antall hypoteser. Det var feil: mange hypoteser er ikke det samme som godt underbygget, og
+en plank som skulle bli vannrett ble en oppfordring til å finne på flere hypoteser der det
+var færrest. Hver leveranse må uansett bære sin del av beslutningen. Det som varierer er
+hvor *solid* søylen er — steinhøyden er søylehøyden delt på antall hypoteser.
 
 Haste- og uenighetsmarkørene er avledet av vurderingene og følger `resultatvisning`.
 Dekningen (avklart / vurdert / uvurdert) vises alltid, fordi den ikke røper noen retning.
