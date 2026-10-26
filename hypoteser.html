@@ -125,8 +125,12 @@ body.en #oversikt{display:none}
 /* Vurderingsbildet er den samme enkeltvisningen med knapper under: å lage et
    eget bilde ville betydd to steder å endre når teksten endres, og rommet
    ville måttet lære to oppsett på ti minutter. */
-body.m-vurder #oversikt,body.m-resultat #oversikt,body.m-gruppe #oversikt{display:none}
-body.m-resultat #enkelt,body.m-gruppe #enkelt{display:none !important}
+/* Ett bilde om gangen. Oversikten og enkeltvisningen er standard, så hvert
+   NYTT bilde må skjule dem eksplisitt — glemmes det, tegnes to flater oppå
+   hverandre i samme flex-kolonne, begge med flex:1. */
+body.m-vurder #oversikt,body.m-resultat #oversikt,
+body.m-gruppe #oversikt,body.m-svar #oversikt{display:none}
+body.m-resultat #enkelt,body.m-gruppe #enkelt,body.m-svar #enkelt{display:none !important}
 /* Høyden låses til vinduet og fordeles med flex, ikke med en calc() som
    gjetter på hvor høy headeren er. Gjetningen bommet: headeren står utenfor
    #enkelt, så hver eneste hypotese dyttet bunnlinja ~50 px under folden. */
@@ -191,7 +195,8 @@ body.fs button.nav.liten:hover,body.fs button.nav.liten:focus-visible{opacity:1}
 /* ---------- navnevalg ---------- */
 /* Dekker hele flata framfor å ligge i hjørnet: navnet må være satt før noen
    vurderer noe, ellers havner stemmene på «undefined» og kan ikke telles. */
-#svar{display:none;flex:1;min-height:0;overflow:auto;gap:14px;flex-direction:column}
+#svar{display:none;flex:1;min-height:0;gap:14px;flex-direction:column}
+#s-liste{display:grid;gap:12px;align-content:start;overflow:auto;min-height:0}
 body.m-svar #svar{display:flex}
 .s-blokk{border-left:6px solid var(--lev,var(--accent));background:var(--surface);
   border:1px solid var(--line);border-left-width:6px;border-radius:10px;
