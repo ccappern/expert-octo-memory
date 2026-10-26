@@ -205,6 +205,13 @@ body.m-svar #svar{display:flex}
 .s-merke.tom{background:var(--line);color:var(--muted)}
 .s-felt{margin:0;font-size:clamp(13px,1vw,18px);line-height:1.45}
 .s-lab{color:var(--muted);font-weight:600}
+.g-nar{margin:0;font-size:clamp(14px,1.05vw,19px);line-height:1.45;color:var(--muted);
+  border-left:4px solid var(--line);padding-left:clamp(10px,.9vw,16px)}
+.g-eksempel{background:var(--accent-soft,#d5ede7);border:1px solid #a9d8cd;border-radius:10px;
+  padding:clamp(10px,1vw,16px);display:grid;gap:6px;font-size:clamp(13px,1vw,17px);line-height:1.45}
+.g-eksempel strong{font-size:clamp(14px,1.05vw,19px)}
+.g-eksempel p{margin:0}
+.g-mal{color:var(--ink)}
 .g-mangler{margin:0;background:var(--warnbg);color:var(--warn);border:1px solid #e6c9a3;
   border-radius:8px;padding:.5em .8em;font-size:clamp(13px,1vw,17px);font-weight:600}
 .g-navn,.gate-kode{display:grid;gap:5px;font:600 13px/1.2 var(--f-body);color:var(--muted)}
@@ -358,6 +365,14 @@ body.m-gruppe #gruppe{display:grid;grid-template-rows:auto 1fr auto}
     <p class="g-mangler" id="g-mangler" hidden>Skriv gruppens navn, ellers lagres svarene bare lokalt.</p>
     <div class="lev" id="g-lev"></div>
     <p class="g-pastand" id="g-pastand"></p>
+    <p class="g-nar" id="g-nar"></p>
+    <div class="g-eksempel" id="g-eksempel" hidden>
+      <strong>Hva skal til for at den blir god nok?</strong>
+      <p>En god hypotese sier hva som må være sant, og hvordan vi ser at det er det.</p>
+      <p class="g-mal"><em>Eksempel:</em> <b>H-22 er god nok når:</b> minst tre virksomheter
+         har bekreftet skriftlig at de vil delta i en pilot.</p>
+      <p class="g-mal" id="g-mal-nr"></p>
+    </div>
     <div class="g-felt">
       <label>Er den formulert godt nok?</label>
       <div class="g-ja">
@@ -945,6 +960,10 @@ function visGruppe(i){
   const p = document.createElement("span"); p.className = "prikk";
   $("g-lev").replaceChildren(p, document.createTextNode(`${hNr(x.nr)} · ${levNavn(x.lev)}`));
   $("g-pastand").textContent = "Vi tror at " + x.tekst;
+  /* Kriteriet MÅ stå her. Spørsmålet er «er den formulert godt nok», og
+     «godt nok» er nettopp det kriteriet sier. Uten det vurderer gruppa
+     halve hypotesen. */
+  $("g-nar").textContent = x.krit ? "Vi vet det når " + x.krit : "Mangler kriterium.";
   /* Feltene bygges aldri på nytt — bare verdien settes, og bare når bruker
      ikke står og skriver i dem. Rives en <textarea> ned mens den har fokus,
      mister gruppa både teksten og markøren, og det er det eneste stedet i
@@ -958,6 +977,11 @@ function visGruppe(i){
   manglerGruppe(!gruppenavn.trim() && Object.keys(grp).length > 0);
   $("g-ja").setAttribute("aria-pressed", String(d.god_nok === true));
   $("g-nei").setAttribute("aria-pressed", String(d.god_nok === false));
+  /* Eksempelet dukker opp først når gruppa har sagt «nei». Det er da de
+     trenger en mal, og å ha den stående hele tiden ville bare vært mer
+     tekst å lese forbi på tjue minutter. */
+  $("g-eksempel").hidden = d.god_nok !== false;
+  $("g-mal-nr").textContent = `Skriv tilsvarende for ${hNr(x.nr)} i feltene under.`;
   $("g-teller").textContent = `${gIdx+1} av ${HYP.length}`;
   $("g-forrige").disabled = gIdx <= 0;
   $("g-neste").disabled   = gIdx >= HYP.length-1;
