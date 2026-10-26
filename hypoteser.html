@@ -242,6 +242,7 @@ body.s-oppsum #s-oppsum{display:block}
 .o-tabell textarea{min-height:2.4em}
 .o-ja{color:var(--ok);font-weight:600}
 .o-nei{color:var(--muted)}
+.g-kreves{margin:4px 0 0;color:var(--warn);font-size:clamp(12px,.9vw,16px);font-weight:600}
 .g-mangler{margin:0;background:var(--warnbg);color:var(--warn);border:1px solid #e6c9a3;
   border-radius:8px;padding:.5em .8em;font-size:clamp(13px,1vw,17px);font-weight:600}
 .g-navn,.gate-kode{display:grid;gap:5px;font:600 13px/1.2 var(--f-body);color:var(--muted)}
@@ -431,8 +432,10 @@ body.m-gruppe #gruppe{display:grid;grid-template-rows:auto 1fr auto}
       </div>
     </div>
     <div class="g-felt">
-      <label for="g-forenkling">Kan den forenkles? Hvordan?</label>
+      <label for="g-forenkling" id="g-forenkling-lbl">Kan den forenkles? Hvordan?</label>
       <textarea id="g-forenkling"></textarea>
+      <p class="g-kreves" id="g-kreves" hidden>Svarte dere nei, må dere si hvorfor — ellers
+         vet ikke plenum hva som er galt med den.</p>
     </div>
     <div class="g-felt">
       <label for="g-validering">Hvordan skal vi validere den?</label>
@@ -1018,7 +1021,12 @@ function tegnSvar(d){
         topp.append(merke);
         kort.append(topp);
 
-        for(const [felt, merkelapp] of [["forenkling","Kan forenkles"],["validering","Hvordan validere"]]){
+        /* Samme skille som i skjemaet: en begrunnelse for «nei» og et
+           forbedringsforslag til en som allerede er god nok, leses helt
+           ulikt i plenum. */
+        for(const [felt, merkelapp] of [
+              ["forenkling", r.god_nok === false ? "Hvorfor ikke" : "Kan forenkles"],
+              ["validering", "Hvordan validere"]]){
           if(!r[felt]) continue;
           const d2 = document.createElement("p");
           d2.className = "s-felt";
@@ -1180,6 +1188,20 @@ function visGruppe(i){
   /* Eksempelet dukker opp først når gruppa har sagt «nei». Det er da de
      trenger en mal, og å ha den stående hele tiden ville bare vært mer
      tekst å lese forbi på tjue minutter. */
+  /* Spørsmålet skifter med svaret. «Kan den forenkles?» er et frivillig
+     forbedringsforslag; har gruppa sagt NEI, er det samme feltet en begrunnelse
+     plenum trenger for å forstå hva som er galt. Samme felt, fordi det er
+     samme sak — men etiketten må si hvilken av de to som gjelder. */
+  const nei = d.god_nok === false;
+  $("g-forenkling-lbl").textContent = nei
+    ? "Hvorfor ikke? Hva må endres?"
+    : "Kan den forenkles? Hvordan?";
+  $("g-forenkling").placeholder = nei
+    ? "for lang · for teknisk · uklar · bundler flere spørsmål …"
+    : "";
+  /* Varselet er en påminnelse, ikke en sperre: en gruppe som har tre minutter
+     igjen skal få lov til å svare nei uten å bli stoppet. */
+  $("g-kreves").hidden = !(nei && !(d.forenkling || "").trim());
   $("g-eksempel").hidden = d.god_nok !== false;
   $("g-mal-nr").textContent = `Skriv tilsvarende for ${hNr(x.nr)} i feltene under.`;
   $("g-teller").textContent = `${gIdx+1} av ${HYP.length}`;
@@ -1196,6 +1218,7 @@ function lagreGruppe(nå){
   const x = HYP[gIdx], d = gData(x.nr);
   d.forenkling = $("g-forenkling").value;
   d.validering = $("g-validering").value;
+  $("g-kreves").hidden = !(d.god_nok === false && !d.forenkling.trim());
   skriv(NOKKEL.grp, grp);          // synkront først, alltid
   synkStatus("Lagret lokalt");
   clearTimeout(gTimer);
