@@ -191,6 +191,11 @@ body.fs button.nav.liten:hover,body.fs button.nav.liten:focus-visible{opacity:1}
 /* ---------- navnevalg ---------- */
 /* Dekker hele flata framfor å ligge i hjørnet: navnet må være satt før noen
    vurderer noe, ellers havner stemmene på «undefined» og kan ikke telles. */
+.g-navn,.gate-kode{display:grid;gap:5px;font:600 13px/1.2 var(--f-body);color:var(--muted)}
+.g-navn input,.gate-kode input{font:inherit;font-weight:400;font-size:16px;color:var(--ink);
+  padding:.5em .7em;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+.g-navn input:focus,.gate-kode input:focus{outline:2px solid var(--accent);outline-offset:1px}
+.gate-feil{color:var(--bad);font-size:13.5px;margin:0}
 #navnegate{position:fixed;inset:0;z-index:50;background:var(--bg);
   display:none;align-items:center;justify-content:center;padding:24px}
 body.uten-navn #navnegate{display:flex}
@@ -322,6 +327,9 @@ body.m-gruppe #gruppe{display:grid;grid-template-rows:auto 1fr auto}
 <div id="gruppe">
   <div></div>
   <div class="g-midt">
+    <label class="g-navn">Gruppe
+      <input id="g-gruppenavn" type="text" autocomplete="off"
+             placeholder="skriv gruppens navn, f.eks. Gruppe B"></label>
     <div class="lev" id="g-lev"></div>
     <p class="g-pastand" id="g-pastand"></p>
     <div class="g-felt">
@@ -352,10 +360,11 @@ body.m-gruppe #gruppe{display:grid;grid-template-rows:auto 1fr auto}
     <h2>Hvem er du?</h2>
     <p>Ingen innlogging. Navnet lagres bare i denne nettleseren, og brukes til å
        telle hvem i rommet som har svart.</p>
-    <select id="gate-valg">
-      <option value="">— velg navnet ditt —</option>
-    </select>
-    <input id="gate-fritekst" type="text" placeholder="…eller skriv navnet ditt" autocomplete="off">
+    <input id="gate-fritekst" type="text" placeholder="Navnet ditt" autocomplete="name" autofocus>
+    <label class="gate-kode">Workshopkode
+      <input id="gate-kode" type="text" autocomplete="off" autocapitalize="none"
+             spellcheck="false" placeholder="deles i rommet"></label>
+    <p class="gate-feil" id="gate-feil" hidden>Feil kode. Spør fasilitator.</p>
     <button type="submit" id="gate-ok" disabled>Fortsett</button>
   </form>
 </div>
@@ -423,13 +432,6 @@ let idx = 0;
    går av stabelen, og en avmelding skal ikke koste en migrasjon. Fritekst i
    tillegg, så en gjest som ikke sto på lista kan delta uten at noen må
    redigere fila midt i møtet. */
-const DELTAKERE = [
- "Dag Efjestad","Jan Erik Ankervig Trydal","Michiel Tarald Engeland","Kristin Kopland",
- "Tommy Skaug","Anders Prytz","Andreas Helsinghof","Ulf Trondsen",
- "Ingvild Nyløkken Kristensson","Sigurd Biørn","Vegard Johnsen","Bore (KraftCERT)",
- "Espen Endal","Margrete Raaum","Peder Stray","Inge Brattås","Aeshwarya Bharadwaj",
- "Christoffer","Dan Solberg","Ingvil Gaasland","Thomas Andre Bennett"
-];
 
 /* ---------- lagring ---------- */
 /* Hele poenget med rekkefølgen her: localStorage skrives SYNKRONT først, og
@@ -437,11 +439,13 @@ const DELTAKERE = [
    og møterommets gjestenett er ikke til å stole på — skal deltakeren ikke
    merke det, og ingen vurdering skal gå tapt. Backenden er en kopi, ikke
    sannheten, helt til workshopen er over. */
-const NOKKEL = {navn:"nordlys-ws-navn", pri:"nordlys-ws-prioritet", grp:"nordlys-ws-gruppe"};
+const NOKKEL = {navn:"nordlys-ws-navn", kode:"nordlys-ws-kode", gruppe:"nordlys-ws-gruppenavn", pri:"nordlys-ws-prioritet", grp:"nordlys-ws-gruppe"};
 const les  = (k,d) => { try{ return JSON.parse(localStorage.getItem(k)) ?? d; }catch(_){ return d; } };
 const skriv = (k,v) => { try{ localStorage.setItem(k, JSON.stringify(v)); }catch(_){} };
 
 let navn = les(NOKKEL.navn, "");
+let kode = les(NOKKEL.kode, "");
+let gruppenavn = les(NOKKEL.gruppe, "");
 let pri  = les(NOKKEL.pri, {});   // {nr: 'maa'|'bor'|'vent'}
 let grp  = les(NOKKEL.grp, {});   // {nr: {god_nok, forenkling, validering}}
 
@@ -460,14 +464,30 @@ function synkStatus(tekst){
    trygt lokalt. */
 async function rpc(fn, args){
   if(!CFG.supabaseUrl || !CFG.supabaseKey) return null;
+  /* Koden sendes med hvert kall og sjekkes i databasen. Den ligger IKKE i
+     denne fila: en sperre i en statisk fil på GitHub Pages er ingen sperre,
+     for kildekoden er offentlig lesbar. Porten under holder tilfeldige ute;
+     det er databasen som holder avstemningen i orden. */
   const r = await fetch(`${CFG.supabaseUrl}/rest/v1/rpc/${fn}`, {
     method:"POST",
     headers:{apikey:CFG.supabaseKey, "Content-Type":"application/json"},
-    body:JSON.stringify(args)
+    body:JSON.stringify({p_kode:kode, ...args})
   });
-  if(!r.ok) throw new Error(`${fn}: ${r.status}`);
+  if(!r.ok){
+    /* Feil kode er den ene feilen deltakeren KAN gjøre noe med, så den må
+       fram. Alt annet er støy hun ikke kan rette. */
+    if(r.status === 401 || r.status === 403) badKode();
+    throw new Error(`${fn}: ${r.status}`);
+  }
   const t = await r.text();
   return t ? JSON.parse(t) : null;
+}
+/* Koden var feil: tilbake til porten, men behold navnet. Vurderingene ligger
+   trygt lokalt og sendes på nytt så snart riktig kode er tastet. */
+function badKode(){
+  kode = ""; skriv(NOKKEL.kode, "");
+  document.body.classList.add("uten-navn");
+  const f = $("gate-feil"); if(f) f.hidden = false;
 }
 function send(fn, args, kvittering){
   /* try/catch rundt selve kallet også: en stubbet eller blokkert fetch kan
@@ -482,11 +502,19 @@ function send(fn, args, kvittering){
 /* ---------- navnevalg ---------- */
 function visNavnegate(){
   document.body.classList.add("uten-navn");
-  $("gate-valg").focus();
+  /* Kjent navn fylles inn, så den som bare mangler kode slipper å velge på
+     nytt. Koden fylles aldri inn — er vi her, var den feil eller tom. */
+  if(navn) $("gate-fritekst").value = navn;
+  $("gate-kode").value = "";
+  $("gate-ok").disabled = true;
+  (navn ? $("gate-kode") : $("gate-fritekst")).focus();
 }
-function settNavn(n){
+function settNavn(n, k){
   navn = n.trim();
+  kode = (k || "").trim();
   skriv(NOKKEL.navn, navn);
+  skriv(NOKKEL.kode, kode);
+  $("gate-feil").hidden = true;
   document.body.classList.remove("uten-navn");
   $("meg").textContent = navn;
   /* Det som allerede ligger lokalt er ikke nødvendigvis sendt — enten fordi
@@ -820,6 +848,8 @@ function visGruppe(i){
     const el = $("g-" + f);
     if(document.activeElement !== el) el.value = d[f] || "";
   });
+  /* Samme regel som tekstfeltene: aldri overskriv mens noen skriver. */
+  if(document.activeElement !== $("g-gruppenavn")) $("g-gruppenavn").value = gruppenavn;
   $("g-ja").setAttribute("aria-pressed", String(d.god_nok === true));
   $("g-nei").setAttribute("aria-pressed", String(d.god_nok === false));
   $("g-teller").textContent = `${gIdx+1} av ${HYP.length}`;
@@ -838,7 +868,12 @@ function lagreGruppe(nå){
      kall i minuttet mot den samme raden. */
   const sendNå = () => {
     gSkitten = false;
-    send("ws_sett_gruppe", {p_navn:navn, p_nr:x.nr, p_god_nok:d.god_nok,
+    /* Avsenderen er GRUPPA og ikke personen. Fire grupper gir da fire rader
+       per hypotese i stedet for 21, og det er gruppas svar som skal
+       presenteres i steg 5. Uten gruppenavn sendes ingenting — da ville
+       radene havnet under tilfeldige enkeltpersoner. */
+    if(!gruppenavn.trim()) return;
+    send("ws_sett_gruppe", {p_navn:gruppenavn, p_nr:x.nr, p_god_nok:d.god_nok,
       p_forenkling:d.forenkling, p_validering:d.validering}, true);
   };
   gSkitten = true;
@@ -854,20 +889,32 @@ $("g-forrige").onclick = () => { if(gSkitten) lagreGruppe(true); visGruppe(gIdx-
 $("g-neste").onclick   = () => { if(gSkitten) lagreGruppe(true); visGruppe(gIdx+1); };
 
 /* ---------- oppstart ---------- */
-const velg = $("gate-valg");
-DELTAKERE.forEach(n => velg.append(Object.assign(document.createElement("option"),{value:n,textContent:n})));
-const gateOk = () => $("gate-ok").disabled = !(velg.value || $("gate-fritekst").value.trim());
-velg.addEventListener("change", () => { if(velg.value) $("gate-fritekst").value = ""; gateOk(); });
-$("gate-fritekst").addEventListener("input", () => { if($("gate-fritekst").value) velg.value = ""; gateOk(); });
+const gateOk = () => $("gate-ok").disabled =
+  !($("gate-fritekst").value.trim() && $("gate-kode").value.trim());
+$("gate-fritekst").addEventListener("input", gateOk);
+$("gate-kode").addEventListener("input", gateOk);
 $("gate-form").addEventListener("submit", e => {
   e.preventDefault();
-  settNavn($("gate-fritekst").value.trim() || velg.value);
+  settNavn($("gate-fritekst").value, $("gate-kode").value);
+});
+$("g-gruppenavn").addEventListener("input", e => {
+  gruppenavn = e.target.value;
+  skriv(NOKKEL.gruppe, gruppenavn);
+});
+/* Når gruppa endelig har skrevet navnet sitt, skal det de allerede har fylt
+   ut følge med. Ellers måtte de skrive alt om igjen fordi navnefeltet sto
+   tomt da de begynte. */
+$("g-gruppenavn").addEventListener("blur", () => {
+  if(!gruppenavn.trim()) return;
+  Object.entries(grp).forEach(([nr,d]) =>
+    send("ws_sett_gruppe", {p_navn:gruppenavn, p_nr:+nr, p_god_nok:d.god_nok,
+      p_forenkling:d.forenkling||"", p_validering:d.validering||""}));
 });
 $("meg").onclick = () => visNavnegate();
 
 tegnOversikt();
 settModus("les");
-if(navn) $("meg").textContent = navn; else visNavnegate();
+if(navn && kode) $("meg").textContent = navn; else visNavnegate();
 
 </script>
 
