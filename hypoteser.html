@@ -195,8 +195,8 @@ body.fs button.nav.liten:hover,body.fs button.nav.liten:focus-visible{opacity:1}
 /* ---------- navnevalg ---------- */
 /* Dekker hele flata framfor å ligge i hjørnet: navnet må være satt før noen
    vurderer noe, ellers havner stemmene på «undefined» og kan ikke telles. */
-#svar{display:none;flex:1;min-height:0;gap:14px;flex-direction:column}
-#s-liste{display:grid;gap:12px;align-content:start;overflow:auto;min-height:0}
+#svar{display:none;flex:1;min-height:0;gap:14px;flex-direction:column;overflow:auto}
+#s-liste{display:grid;gap:12px;align-content:start}
 body.m-svar #svar{display:flex}
 .s-blokk{border-left:6px solid var(--lev,var(--accent));background:var(--surface);
   border:1px solid var(--line);border-left-width:6px;border-radius:10px;
@@ -217,6 +217,15 @@ body.m-svar #svar{display:flex}
 .g-eksempel strong{font-size:clamp(14px,1.05vw,19px)}
 .g-eksempel p{margin:0}
 .g-mal{color:var(--ink)}
+.g-faner{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.g-faner button{font:600 clamp(12px,.9vw,16px)/1 var(--f-body);padding:.5em 1em;
+  border:1px solid var(--line);background:var(--surface);color:var(--muted);
+  border-radius:999px;cursor:pointer}
+.g-faner button[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:#fff}
+#g-nytt{display:none}
+body.g-ny #g-nytt{display:grid}
+body.g-ny .g-midt:not(#g-nytt) > *:not(.g-navn):not(#g-mangler):not(#g-faner){display:none}
+.s-nye{border-left-color:var(--muted)}
 .g-mangler{margin:0;background:var(--warnbg);color:var(--warn);border:1px solid #e6c9a3;
   border-radius:8px;padding:.5em .8em;font-size:clamp(13px,1vw,17px);font-weight:600}
 .g-navn,.gate-kode{display:grid;gap:5px;font:600 13px/1.2 var(--f-body);color:var(--muted)}
@@ -351,6 +360,7 @@ body.m-gruppe #gruppe{display:grid;grid-template-rows:auto 1fr auto}
     <span class="hjelp">Oppdateres hvert 5. sekund</span>
   </div>
   <div id="s-liste"></div>
+  <section class="s-blokk s-nye" id="s-nye" hidden></section>
 </div>
 
 <div id="resultat">
@@ -368,6 +378,10 @@ body.m-gruppe #gruppe{display:grid;grid-template-rows:auto 1fr auto}
       <input id="g-gruppenavn" type="text" autocomplete="off"
              placeholder="skriv gruppens navn, f.eks. Gruppe B"></label>
     <p class="g-mangler" id="g-mangler" hidden>Skriv gruppens navn, ellers lagres svarene bare lokalt.</p>
+    <div class="g-faner" id="g-faner">
+      <button type="button" data-fane="vurder" aria-pressed="true">Vurder hypotesene</button>
+      <button type="button" data-fane="ny" aria-pressed="false">Mangler det en hypotese?</button>
+    </div>
     <div class="lev" id="g-lev"></div>
     <p class="g-pastand" id="g-pastand"></p>
     <p class="g-nar" id="g-nar"></p>
@@ -392,6 +406,27 @@ body.m-gruppe #gruppe{display:grid;grid-template-rows:auto 1fr auto}
     <div class="g-felt">
       <label for="g-validering">Hvordan skal vi validere den?</label>
       <textarea id="g-validering"></textarea>
+    </div>
+  </div>
+
+  <div class="g-midt" id="g-nytt">
+    <p class="g-nar">Tre leveranser har ingen hypoteser i dag. Mangler det noe styringsgruppen
+       må se behandlet før go/no-go, skriv det her — det kommer opp i den felles gjennomgangen.</p>
+    <div class="g-felt">
+      <label for="n-tekst">Vi tror at …</label>
+      <textarea id="n-tekst" placeholder="påstanden som må være sann"></textarea>
+    </div>
+    <div class="g-felt">
+      <label for="n-kriterium">Vi vet det når …</label>
+      <textarea id="n-kriterium" placeholder="hva som må ha skjedd for at den er avklart"></textarea>
+    </div>
+    <div class="g-felt">
+      <label for="n-leveranse">Hvilken leveranse hører den til?</label>
+      <input id="n-leveranse" type="text" autocomplete="off" placeholder="f.eks. Gjennomførbar teknisk retning">
+    </div>
+    <div class="g-faner">
+      <button type="button" id="n-ny">+ Nytt forslag</button>
+      <span class="hjelp" id="n-teller"></span>
     </div>
   </div>
   <div class="bunn">
@@ -485,13 +520,18 @@ let idx = 0;
    og møterommets gjestenett er ikke til å stole på — skal deltakeren ikke
    merke det, og ingen vurdering skal gå tapt. Backenden er en kopi, ikke
    sannheten, helt til workshopen er over. */
-const NOKKEL = {navn:"nordlys-ws-navn", kode:"nordlys-ws-kode", gruppe:"nordlys-ws-gruppenavn", pri:"nordlys-ws-prioritet", grp:"nordlys-ws-gruppe"};
+const NOKKEL = {navn:"nordlys-ws-navn", kode:"nordlys-ws-kode", gruppe:"nordlys-ws-gruppenavn", nye:"nordlys-ws-nye", pri:"nordlys-ws-prioritet", grp:"nordlys-ws-gruppe"};
 const les  = (k,d) => { try{ return JSON.parse(localStorage.getItem(k)) ?? d; }catch(_){ return d; } };
 const skriv = (k,v) => { try{ localStorage.setItem(k, JSON.stringify(v)); }catch(_){} };
 
 let navn = les(NOKKEL.navn, "");
 let kode = les(NOKKEL.kode, "");
 let gruppenavn = les(NOKKEL.gruppe, "");
+/* Gruppas egne forslag. Løpenummeret settes her og ikke i databasen: da kan
+   gruppa rette sitt eget forslag i stedet for å lage et nytt for hvert ord. */
+let nye  = les(NOKKEL.nye, []);   // [{lopenr, tekst, kriterium, leveranse}]
+let nIdx = 0;
+let gFane = "vurder";
 let pri  = les(NOKKEL.pri, {});   // {nr: 'maa'|'bor'|'vent'}
 let grp  = les(NOKKEL.grp, {});   // {nr: {god_nok, forenkling, validering}}
 
@@ -898,9 +938,11 @@ function tegnSvar(d){
   if(!rader.length){
     liste.replaceChildren(Object.assign(document.createElement("p"),
       {className:"hjelp", textContent:"Ingen gruppesvar ennå. De dukker opp her etter hvert som gruppene skriver."}));
+    tegnNye((d && d.nye) || []);
     return;
   }
 
+  tegnNye((d && d.nye) || []);
   const perNr = new Map();
   for(const r of rader){ if(!perNr.has(r.nr)) perNr.set(r.nr, []); perNr.get(r.nr).push(r); }
 
@@ -950,6 +992,34 @@ function tegnSvar(d){
       }
       return blokk;
     }));
+}
+
+/* Forslagene står nederst og ikke blandet inn blant hypotesene: de er noe
+   annet enn en vurdering av det som finnes, og i gjennomgangen tas de til
+   slutt — når rommet har sett hva som allerede er dekket. */
+function tegnNye(rader){
+  const boks = $("s-nye");
+  const med = rader.filter(r => r.tekst && r.tekst.trim());
+  boks.hidden = !med.length;
+  if(!med.length){ boks.replaceChildren(); return; }
+
+  const h = document.createElement("h3");
+  h.textContent = `Foreslåtte hypoteser som mangler (${med.length})`;
+  boks.replaceChildren(h, ...med.map(r => {
+    const kort = document.createElement("div");
+    kort.className = "s-kort";
+    const topp = document.createElement("div");
+    topp.className = "s-topp";
+    topp.append(Object.assign(document.createElement("strong"),{textContent:r.navn}));
+    if(r.leveranse) topp.append(Object.assign(document.createElement("span"),
+      {className:"s-merke tom", textContent:r.leveranse}));
+    kort.append(topp);
+    kort.append(Object.assign(document.createElement("p"),
+      {className:"s-felt", textContent:"Vi tror at " + r.tekst}));
+    if(r.kriterium) kort.append(Object.assign(document.createElement("p"),
+      {className:"s-felt", textContent:"Vi vet det når " + r.kriterium}));
+    return kort;
+  }));
 }
 
 /* ---------- gruppearbeid (steg 4) ---------- */
@@ -1025,6 +1095,59 @@ function lagreGruppe(nå){
   $(id).addEventListener("input", () => lagreGruppe(false));
   $(id).addEventListener("blur",  () => { if(gSkitten) lagreGruppe(true); });
 });
+function settFane(f){
+  gFane = f;
+  for(const b of $("g-faner").querySelectorAll("button"))
+    b.setAttribute("aria-pressed", String(b.dataset.fane === f));
+  document.body.classList.toggle("g-ny", f === "ny");
+  if(f === "ny") visNy(); else visGruppe(gIdx);
+}
+$("g-faner").addEventListener("click", e => {
+  const b = e.target.closest("button[data-fane]");
+  if(b) settFane(b.dataset.fane);
+});
+
+/* ---------- manglende hypoteser ---------- */
+const nData = () => (nye[nIdx] = nye[nIdx] || {lopenr: nIdx + 1, tekst:"", kriterium:"", leveranse:""});
+function visNy(){
+  const d = nData();
+  /* Samme regel som ellers: aldri overskriv et felt noen står og skriver i. */
+  for(const [id, f] of [["n-tekst","tekst"],["n-kriterium","kriterium"],["n-leveranse","leveranse"]])
+    if(document.activeElement !== $(id)) $(id).value = d[f] || "";
+  $("n-teller").textContent = nye.length > 1 ? `Forslag ${nIdx+1} av ${nye.length}` : "";
+  manglerGruppe(!gruppenavn.trim() && nye.some(n => n.tekst));
+}
+let nTimer = 0;
+function lagreNy(nå){
+  const d = nData();
+  d.tekst      = $("n-tekst").value;
+  d.kriterium  = $("n-kriterium").value;
+  d.leveranse  = $("n-leveranse").value;
+  skriv(NOKKEL.nye, nye);              // synkront først, alltid
+  synkStatus("Lagret lokalt");
+  clearTimeout(nTimer);
+  const sendNå = () => {
+    if(!gruppenavn.trim()){ manglerGruppe(true); return; }
+    send("ws_sett_ny", {p_navn:gruppenavn, p_lopenr:d.lopenr, p_tekst:d.tekst,
+      p_kriterium:d.kriterium, p_leveranse:d.leveranse}, true);
+  };
+  if(nå) sendNå(); else nTimer = setTimeout(sendNå, 900);
+}
+["n-tekst","n-kriterium","n-leveranse"].forEach(id => {
+  $(id).addEventListener("input", () => lagreNy(false));
+  $(id).addEventListener("blur",  () => lagreNy(true));
+});
+$("n-ny").onclick = () => {
+  lagreNy(true);
+  /* Et tomt forslag til skal ikke lages før det forrige har innhold — ellers
+     fyller en utålmodig finger opp lista med tomme rader. */
+  if(!nData().tekst.trim()) return;
+  nIdx = nye.length;
+  nData();
+  visNy();
+  $("n-tekst").focus();
+};
+
 $("g-ja").onclick  = () => { gData(HYP[gIdx].nr).god_nok = true;  lagreGruppe(true); visGruppe(gIdx); };
 $("g-nei").onclick = () => { gData(HYP[gIdx].nr).god_nok = false; lagreGruppe(true); visGruppe(gIdx); };
 $("g-forrige").onclick = () => { if(gSkitten) lagreGruppe(true); visGruppe(gIdx-1); };
@@ -1054,6 +1177,9 @@ $("g-gruppenavn").addEventListener("blur", () => {
   Object.entries(grp).forEach(([nr,d]) =>
     send("ws_sett_gruppe", {p_navn:gruppenavn, p_nr:+nr, p_god_nok:d.god_nok,
       p_forenkling:d.forenkling||"", p_validering:d.validering||""}));
+  nye.filter(n => n && n.tekst.trim()).forEach(n =>
+    send("ws_sett_ny", {p_navn:gruppenavn, p_lopenr:n.lopenr, p_tekst:n.tekst,
+      p_kriterium:n.kriterium||"", p_leveranse:n.leveranse||""}));
 });
 $("meg").onclick = () => visNavnegate();
 
