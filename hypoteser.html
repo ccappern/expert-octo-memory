@@ -632,7 +632,7 @@ function settNavn(n, k){
   $("meg").textContent = navn;
   /* Det som allerede ligger lokalt er ikke nødvendigvis sendt — enten fordi
      nettet var nede, eller fordi navnet manglet da det ble registrert. */
-  Object.entries(pri).forEach(([nr,p]) => send("ws_sett_prioritet",{p_navn:navn,p_nr:+nr,p_prioritet:p}));
+  Object.entries(pri).forEach(([nr,p]) => { if(p) send("ws_sett_prioritet",{p_navn:navn,p_nr:+nr,p_prioritet:p}); });
 }
 
 
@@ -851,16 +851,26 @@ function oppdaterVurderKnapper(){
 }
 function settPrioritet(p){
   const nr = HYP[idx].nr;
-  pri[nr] = p;
+  /* Trykk på det som allerede er valgt = angre. Auto-blaingen under sender
+     deg videre med én gang, så et feiltrykk forsvinner ut av syne før du
+     rekker å se det — uten en vei ut blir stemmen stående som om den var
+     ment. Angring er også «ingen mening», og det er bevisst ikke en fjerde
+     knapp: tredelingen i agendaen skal stå urørt, og den som ikke har svart
+     teller ganske enkelt ikke med på den hypotesen. */
+  const angrer = pri[nr] === p;
+  if(angrer) delete pri[nr]; else pri[nr] = p;
+
   skriv(NOKKEL.pri, pri);          // synkront, før nettverket. Se kommentar over.
-  synkStatus("Lagret lokalt");
+  synkStatus(angrer ? "Fjernet" : "Lagret lokalt");
   oppdaterVurderKnapper();
-  send("ws_sett_prioritet", {p_navn:navn, p_nr:nr, p_prioritet:p}, true);
+  send("ws_sett_prioritet", {p_navn:navn, p_nr:nr, p_prioritet: angrer ? "" : p}, true);
+
   /* Automatisk videre: ti minutter på ni hypoteser er knapt, og et ekstra
      klikk per hypotese er nesten ett minutt av dem. Siste hypotese blir
      stående — da er man ferdig, og et hopp tilbake til start ville sett ut
-     som om svaret ikke ble registrert. */
-  if(idx < HYP.length - 1) setTimeout(() => vis(idx + 1), 160);
+     som om svaret ikke ble registrert.
+     Angrer du, blir du stående: du skal rette, ikke sendes videre igjen. */
+  if(!angrer && idx < HYP.length - 1) setTimeout(() => vis(idx + 1), 160);
 }
 $("vurder-rad").querySelectorAll(".vbtn").forEach(b =>
   b.onclick = () => settPrioritet(b.dataset.p));
@@ -880,7 +890,7 @@ function settModus(m){
     /* Vurderingsbildet ER enkeltvisningen. Står man i oversikten når man
        bytter, må den åpnes — ellers møter deltakeren en tom skjerm. */
     vis(idx);
-    $("hjelp").textContent = "Velg én · blar automatisk videre · ← → blar";
+    $("hjelp").textContent = "Velg én · blar videre automatisk · trykk valgt svar igjen for å fjerne";
   } else if(m === "les"){
     document.body.classList.remove("en");
     tegnOversikt();
