@@ -226,6 +226,22 @@ body.m-svar #svar{display:flex}
 body.g-ny #g-nytt{display:grid}
 body.g-ny .g-midt:not(#g-nytt) > *:not(.g-navn):not(#g-mangler):not(#g-faner){display:none}
 .s-nye{border-left-color:var(--muted)}
+#s-oppsum{display:none}
+body.s-oppsum #s-svar{display:none}
+body.s-oppsum #s-oppsum{display:block}
+.o-tabell{width:100%;border-collapse:collapse;font-size:clamp(12px,.95vw,17px)}
+.o-tabell th{text-align:left;padding:8px 10px;border-bottom:2px solid var(--line);
+  color:var(--muted);font-size:clamp(11px,.85vw,15px);white-space:nowrap}
+.o-tabell td{padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+.o-tabell td:first-child{white-space:nowrap;font-family:var(--f-mono);font-weight:600}
+.o-tabell input,.o-tabell textarea,.o-tabell select{width:100%;font:inherit;color:inherit;
+  border:1px solid transparent;border-radius:6px;background:transparent;padding:.35em .45em;resize:vertical}
+.o-tabell input:hover,.o-tabell textarea:hover,.o-tabell select:hover{border-color:var(--line)}
+.o-tabell input:focus,.o-tabell textarea:focus,.o-tabell select:focus{
+  outline:none;border-color:var(--accent);background:var(--surface)}
+.o-tabell textarea{min-height:2.4em}
+.o-ja{color:var(--ok);font-weight:600}
+.o-nei{color:var(--muted)}
 .g-mangler{margin:0;background:var(--warnbg);color:var(--warn);border:1px solid #e6c9a3;
   border-radius:8px;padding:.5em .8em;font-size:clamp(13px,1vw,17px);font-weight:600}
 .g-navn,.gate-kode{display:grid;gap:5px;font:600 13px/1.2 var(--f-body);color:var(--muted)}
@@ -319,11 +335,11 @@ body.m-gruppe #gruppe{display:grid;grid-template-rows:auto 1fr auto}
   <span class="sub" id="sub"></span>
   <span class="spacer"></span>
   <div class="bryter" id="bryter">
-    <label><input type="radio" name="bilde" value="les" checked><span>Les</span></label>
-    <label><input type="radio" name="bilde" value="vurder"><span>Vurder</span></label>
-    <label><input type="radio" name="bilde" value="resultat"><span>Resultat</span></label>
-    <label><input type="radio" name="bilde" value="gruppe"><span>Gruppe</span></label>
-    <label><input type="radio" name="bilde" value="svar"><span>Svar</span></label>
+    <label><input type="radio" name="bilde" value="les" checked><span>Hypotesene</span></label>
+    <label><input type="radio" name="bilde" value="vurder"><span>2 Min vurdering</span></label>
+    <label><input type="radio" name="bilde" value="resultat"><span>3 Prioritering</span></label>
+    <label><input type="radio" name="bilde" value="gruppe"><span>4 Gruppearbeid</span></label>
+    <label><input type="radio" name="bilde" value="svar"><span>5 Gjennomgang</span></label>
   </div>
   <span id="sync"></span>
   <button type="button" id="meg"></button>
@@ -359,8 +375,23 @@ body.m-gruppe #gruppe{display:grid;grid-template-rows:auto 1fr auto}
     <span><strong id="s-antall">0</strong> svar fra <strong id="s-grupper">0</strong> grupper</span>
     <span class="hjelp">Oppdateres hvert 5. sekund</span>
   </div>
-  <div id="s-liste"></div>
-  <section class="s-blokk s-nye" id="s-nye" hidden></section>
+  <div class="g-faner" id="s-faner">
+    <button type="button" data-sfane="svar" aria-pressed="true">Gruppenes svar</button>
+    <button type="button" data-sfane="oppsum" aria-pressed="false">Oppsummering og neste steg</button>
+  </div>
+  <div id="s-svar">
+    <div id="s-liste"></div>
+    <section class="s-blokk s-nye" id="s-nye" hidden></section>
+  </div>
+  <div id="s-oppsum">
+    <table class="o-tabell">
+      <thead><tr>
+        <th>Hypotese</th><th>Kritisk før go/no-go</th><th>Hvordan validere</th>
+        <th>Eier</th><th>Neste steg</th>
+      </tr></thead>
+      <tbody id="o-rader"></tbody>
+    </table>
+  </div>
 </div>
 
 <div id="resultat">
@@ -910,6 +941,7 @@ async function hentStatus(){
     const st = await rpc("ws_status", {});
     const d = st && (Array.isArray(st) ? st[0] : st);
     tegnResultat(d); tegnSvar(d);
+    tegnOppsum(d && d.oppsum, d && d.prioritet, d && d.gruppe);
   }catch(e){
     console.warn("ws_status feilet:", e);
     tegnResultat(null); tegnSvar(null);
@@ -1015,6 +1047,95 @@ function tegnNye(rader){
     return kort;
   }));
 }
+
+/* ---------- oppsummering (steg 6) ---------- */
+/* Tabellen er FELLES og føres av fasilitator mens rommet ser på. Derfor ingen
+   debounce-strid om hvem som eide verdien sist: det er én penn, og skjermen
+   viser hva som står.
+   Feltene bygges bare én gang per rad og oppdateres med verdi — rives de ned
+   hvert 5. sekund av pollingen, mister den som skriver både tekst og markør. */
+let oRader = new Map();     // nr → {tr, felt:{...}}
+let oTimer = {};
+function tegnOppsum(oppsum, prioritet, gruppesvar){
+  const pri = new Map((prioritet||[]).map(r => [r.nr, r]));
+  const val = new Map();
+  for(const g of gruppesvar||[]) if(g.validering && g.validering.trim())
+    val.set(g.nr, [...(val.get(g.nr)||[]), g.validering.trim()]);
+  const lagret = new Map((oppsum||[]).map(r => [r.nr, r]));
+
+  /* Rekkefølgen følger prioriteringen: det viktigste øverst, som i steg 3.
+     Hypoteser ingen har stemt på havner bakerst i nummerrekkefølge. */
+  const sortert = HYP.slice().sort((a,b) =>
+    ((pri.get(b.nr)||{}).maa||0) - ((pri.get(a.nr)||{}).maa||0) || a.nr - b.nr);
+
+  const tbody = $("o-rader");
+  for(const x of sortert){
+    let rad = oRader.get(x.nr);
+    if(!rad){
+      const tr = document.createElement("tr");
+      const td0 = document.createElement("td");
+      td0.textContent = hNr(x.nr);
+      td0.title = x.tekst;
+      const felt = {};
+
+      const tdK = document.createElement("td");
+      felt.kritisk = document.createElement("select");
+      for(const [v,t] of [["","–"],["ja","Ja"],["nei","Nei"]])
+        felt.kritisk.append(Object.assign(document.createElement("option"),{value:v,textContent:t}));
+      tdK.append(felt.kritisk);
+
+      const lagC = (navn, rader) => {
+        const td = document.createElement("td");
+        felt[navn] = document.createElement(rader ? "textarea" : "input");
+        if(rader) felt[navn].rows = rader;
+        td.append(felt[navn]);
+        return td;
+      };
+      tr.append(td0, tdK, lagC("validering",2), lagC("eier"), lagC("neste",2));
+      tbody.append(tr);
+      rad = {tr, felt};
+      oRader.set(x.nr, rad);
+
+      for(const [navn, el] of Object.entries(felt)){
+        const lagre = () => {
+          clearTimeout(oTimer[x.nr]);
+          oTimer[x.nr] = setTimeout(() => send("ws_sett_oppsum", {
+            p_nr: x.nr,
+            p_kritisk: felt.kritisk.value,
+            p_validering: felt.validering.value,
+            p_eier: felt.eier.value,
+            p_neste: felt.neste.value}, true), navn === "kritisk" ? 0 : 700);
+        };
+        el.addEventListener("input", lagre);
+        el.addEventListener("change", lagre);
+      }
+    }
+    tbody.append(rad.tr);   // flytt til riktig plass uten å bygge på nytt
+
+    const d = lagret.get(x.nr) || {};
+    /* Forslag der feltet er tomt: valideringen gruppene skrev, og «ja» når
+       flertallet sa må avklares. Fasilitator kan overstyre — det er et
+       utgangspunkt, ikke en konklusjon. */
+    const p = pri.get(x.nr) || {maa:0,bor:0,vent:0};
+    const forslagKritisk = p.maa > (p.bor + p.vent) ? "ja" : "";
+    for(const [navn, el] of Object.entries(rad.felt)){
+      if(document.activeElement === el) continue;
+      let v = d[navn] || "";
+      if(!v && navn === "kritisk")    v = forslagKritisk;
+      if(!v && navn === "validering") v = (val.get(x.nr) || []).join(" · ");
+      el.value = v;
+    }
+    rad.felt.kritisk.className = rad.felt.kritisk.value === "ja" ? "o-ja"
+                              : rad.felt.kritisk.value === "nei" ? "o-nei" : "";
+  }
+}
+$("s-faner").addEventListener("click", e => {
+  const b = e.target.closest("button[data-sfane]");
+  if(!b) return;
+  for(const k of $("s-faner").querySelectorAll("button"))
+    k.setAttribute("aria-pressed", String(k === b));
+  document.body.classList.toggle("s-oppsum", b.dataset.sfane === "oppsum");
+});
 
 /* ---------- gruppearbeid (steg 4) ---------- */
 let gIdx = 0;
