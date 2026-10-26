@@ -1,0 +1,884 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Nordlys · forslag til hypoteser</title>
+<!--
+  Workshopverktøyet for 26.10 kl. 14.30. Står bevisst UTENFOR index.html:
+
+  Den som skal projisere en liste trenger ikke innlogging, ikke polling og
+  ikke en backend som kan være nede. Hypotesene ligger derfor i fila. Prisen
+  er at den må genereres på nytt når registeret endres — og det er riktig
+  pris for noe som skal virke klokka 14.30 uansett hva nettet gjør.
+
+  INGEN INNLOGGING. index.html krever e-postkode, og friksjonen var for stor
+  for en workshop på én time: ti av tjueen ville fortsatt stått i innboksen
+  når stegene var over. Her velger man navnet sitt én gang, og det ligger i
+  localStorage. Navnet er ikke tilgangskontroll — det er en etikett, slik at
+  gruppa kan se hvem som har svart.
+
+  Fire bilder, og de svarer på hver sin ting:
+  LES      — oversikt + én om gangen. Hva står det egentlig?
+  VURDER   — samme enkeltvisning, men med tre knapper. Steg 2 i agendaen.
+  RESULTAT — storskjermbildet rommet skjærer ned til 6–10 hypoteser foran.
+  GRUPPE   — steg 4: er den formulert godt nok, kan den forenkles, hvordan
+             validere.
+
+  Piltastene blar, Esc går tilbake til oversikten. Samme mønster som
+  storskjermen i index.html, så den som har brukt den ene kan den andre.
+-->
+<style>
+:root{
+  --bg:#eef3f6; --surface:#ffffff; --ink:#13202a; --muted:#566775; --line:#d3dde4;
+  --accent:#0d7565;
+  --l-malbilde:#0d7565;  --l-brukerbehov:#15a088;
+  --l-teknisk:#2f64a8;
+  --l-styring:#6a4bb0;   --l-forankring:#8f74d4;
+  --l-juridisk:#a45a12;  --l-forpliktelse:#c77c2e;
+  --l-beslutning:#a8326f;
+  --warnbg:#fbeedd; --warn:#8a4a0c;
+  /* Prioritetsfargene er bevisst ikke leveransefargene: de to skalaene leses
+     samtidig på samme kort, og deler de palett blir de umulige å skille. */
+  --p-maa:#1f7a3d; --p-bor:#b9820a; --p-vent:#7b8894;
+  --f-display:"Familjen Grotesk","Helvetica Neue",Arial,sans-serif;
+  --f-body:system-ui,-apple-system,"Segoe UI","Helvetica Neue",Arial,sans-serif;
+  --f-mono:ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+/* Begge bildene fyller skjermen og ruller aldri. På en projektor finnes det
+   ingen som kan rulle — publikum ser bare det som står på flata, så tekst
+   under folden er like godt borte. */
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);
+  height:100vh;display:flex;flex-direction:column;overflow:hidden;
+  /* Projisert bilde: romslige marger. Et diagram som går helt ut i kanten
+     blir slitsomt å lese på avstand. */
+  padding:clamp(20px,3.5vw,56px)}
+
+header{display:flex;align-items:baseline;gap:18px;flex-wrap:wrap;flex:none;
+  margin-bottom:clamp(16px,2.4vh,30px)}
+h1{font-family:var(--f-display);font-size:clamp(22px,2.3vw,38px);margin:0;letter-spacing:-.01em}
+/* Merkingen står i toppen og ikke i et hjørne, fordi toppen er det eneste som
+   er synlig i BEGGE bildene. Den som bare ser ett oppslag på projektoren skal
+   ikke kunne tro at dette er vedtatt — leses lista som fasit, blir den ikke
+   utfordret, og da har workshopen mistet sin eneste jobb. */
+/* Gulvet er 16px og ikke 12: på en 720p-projektor ga 1vw 12,8px, og en
+   advarsel ingen bakerst i rommet kan lese er ingen advarsel. Headeren har
+   god plass til overs ved alle oppløsninger, så prisen er null. */
+.status{font:600 clamp(16px,1vw,19px)/1 var(--f-body);letter-spacing:.02em;
+  background:var(--warnbg);color:var(--warn);border:1px solid #e6c9a3;
+  border-radius:999px;padding:.42em 1em;white-space:nowrap;flex:none}
+/* Samme grunn: undertittelen bærer resten av forbeholdet («ingenting er
+   besluttet») og må kunne leses sammen med merket, ikke bare ved siden av. */
+.sub{color:var(--muted);font-size:clamp(15px,1.05vw,19px)}
+.spacer{flex:1}
+.hjelp{color:var(--muted);font-size:clamp(11px,.85vw,15px);font-family:var(--f-mono)}
+
+/* ---------- oversikt ---------- */
+/* auto-fit framfor et fast antall kolonner: ti kort skal fylle bredden på en
+   projektor like godt som på en laptop, uten et mediaspørsmål per oppsett. */
+/* Rutenettet fyller skjermen, det stabler seg ikke øverst. Ti kort som slutter
+   midt på flata lar halve projektorbildet stå tomt mens teksten er for liten
+   til å leses bakerst — og det er lesbarhet bakerst som er hele kravet her.
+   Radene deler høyden likt, så kortene vokser med skjermen i stedet for med
+   teksten. Fem kolonner på 1080p gir to rader; tre kolonner på 720p gir fire.
+
+   auto-fit framfor et fast antall kolonner: det skal virke på en projektor og
+   en laptop uten et mediaspørsmål per oppsett. */
+#oversikt{display:grid;gap:clamp(10px,1.1vw,18px);
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,330px),1fr));
+  grid-auto-rows:1fr;flex:1;min-height:0}
+.kort{background:var(--surface);border:1px solid var(--line);border-left:6px solid var(--lev,var(--accent));
+  border-radius:10px;padding:clamp(14px,1.3vw,26px);cursor:pointer;
+  display:grid;gap:clamp(8px,.8vh,14px);align-content:start;text-align:left;font:inherit;color:inherit;
+  min-height:0;overflow:hidden}
+.kort:hover,.kort:focus-visible{border-color:var(--lev,var(--accent));outline:none;
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--lev,var(--accent)) 22%,transparent)}
+/* Minimum 15px og ikke 12: merkelinja er det publikum roper ut når de vil
+   snakke om en hypotese («ta H-28 igjen»). Er den uleselig bakerst, må de
+   beskrive påstanden i stedet, og da stopper samtalen opp. */
+.merke{display:flex;align-items:center;gap:9px;
+  font:600 clamp(15px,.95vw,19px)/1.2 var(--f-mono);color:var(--muted);letter-spacing:.05em}
+.prikk{width:clamp(11px,.8vw,15px);aspect-ratio:1;border-radius:50%;
+  background:var(--lev,var(--accent));flex:none}
+/* Skalerer på vh og ikke bare vw: en bred, lav projektor har plass i bredden,
+   men ikke i høyden, og det er høyden som avgjør hvor mange linjer det blir.
+   Taket er satt så kortene faktisk fylles av tekst: med et lavere tak sto det
+   fem linjer øverst og en halv korthøyde tom luft under på 1080p, og da er
+   skjermplassen brukt på ingenting. */
+.kort p{margin:0;font-size:clamp(20px,min(1.75vw,3.1vh),34px);line-height:1.35;
+  /* «kraftberedskapsforskriften» er lengre enn en kortspalte. Uten brekk
+     stikker ordet ut over kortkanten og blir kappet midt i. */
+  overflow-wrap:anywhere}
+/* Lange påstander klippes i oversikten. Hele teksten står i enkeltvisningen,
+   og et kort som er dobbelt så høyt som naboen ødelegger rutenettet.
+   Antall linjer settes av tilpassOversikt(): line-clamp teller linjer, mens
+   kortet klipper i piksler, og de to er bare enige når tallet stemmer med
+   plassen. Fem er taket, ikke fasiten. */
+.kort p{display:-webkit-box;-webkit-line-clamp:var(--linjer,5);line-clamp:var(--linjer,5);
+  -webkit-box-orient:vertical;overflow:hidden}
+
+/* ---------- én om gangen ---------- */
+#enkelt{display:none;grid-template-rows:auto 1fr auto auto}
+body.en #oversikt{display:none}
+/* Vurderingsbildet er den samme enkeltvisningen med knapper under: å lage et
+   eget bilde ville betydd to steder å endre når teksten endres, og rommet
+   ville måttet lære to oppsett på ti minutter. */
+body.m-vurder #oversikt,body.m-resultat #oversikt,body.m-gruppe #oversikt{display:none}
+body.m-resultat #enkelt,body.m-gruppe #enkelt{display:none !important}
+/* Høyden låses til vinduet og fordeles med flex, ikke med en calc() som
+   gjetter på hvor høy headeren er. Gjetningen bommet: headeren står utenfor
+   #enkelt, så hver eneste hypotese dyttet bunnlinja ~50 px under folden. */
+/* body er allerede flex-kolonne over — her skal bare flatene byttes. */
+body.en #enkelt,body.m-vurder #enkelt{display:grid;flex:1;min-height:0}
+body.en header,body.m-vurder header{margin-bottom:clamp(10px,1.6vh,20px)}
+/* min-height:0 er det som faktisk holder bunnlinja i ro: uten den vokser
+   1fr-raden med innholdet i stedet for å begrense det. */
+.midt{display:grid;align-content:center;justify-items:start;gap:clamp(14px,2vh,26px);
+  max-width:34ch;margin:0 auto;width:100%;min-height:0;
+  /* 34ch skal bety 34 tegn av *påstandens* skrift. Uten denne linja regnes ch
+     mot body-skriften på 16px, og spalta blir ~270px bred — en knapp halv
+     setning per linje på en projektor. */
+  font-size:calc(clamp(26px,3.3vw,62px) * var(--skala,1))}
+.lev{display:flex;align-items:center;gap:12px;
+  font:600 clamp(13px,1.05vw,20px)/1.2 var(--f-mono);color:var(--lev,var(--accent));letter-spacing:.05em;
+  font-size:calc(clamp(13px,1.05vw,20px) * var(--skala,1))}
+.lev .prikk{width:15px;height:15px}
+.pastand{margin:0;font-family:var(--f-display);font-weight:600;
+  font-size:calc(clamp(26px,3.3vw,62px) * var(--skala,1));line-height:1.18;letter-spacing:-.015em}
+.nar{margin:0;font-size:calc(clamp(15px,1.35vw,27px) * var(--skala,1));line-height:1.45;color:var(--muted);
+  border-left:4px solid var(--line);padding-left:clamp(12px,1vw,20px)}
+.pre{color:var(--muted);font-weight:400}
+.nar .pre{color:var(--ink);font-weight:600}
+/* Bunnlinja står stille uansett hvor lang påstanden er. Den som blar gjennom
+   ti på rad skal ikke lete etter telleren på et nytt sted hver gang. */
+.bunn{display:flex;align-items:center;gap:20px;color:var(--muted);
+  font-size:clamp(12px,.95vw,18px);padding-top:clamp(10px,1.4vh,18px);border-top:1px solid var(--line)}
+.teller{font-family:var(--f-display);font-weight:700;font-variant-numeric:tabular-nums;
+  font-size:clamp(15px,1.3vw,26px);color:var(--ink)}
+button.nav{font:inherit;background:var(--surface);border:1px solid var(--line);
+  border-radius:999px;padding:.45em 1.1em;cursor:pointer;color:inherit}
+button.nav:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
+button.nav:disabled{opacity:.4;cursor:default}
+/* Knappen står i headeren, ikke som et flytende ikon over innholdet: alt som
+   ligger oppå flata havner i veien på et projisert bilde. I fullskjerm blir
+   den dus — den skal kunne finnes igjen, men ikke konkurrere med teksten. */
+button.nav.liten{font-size:clamp(12px,.9vw,16px);padding:.35em .9em;flex:none}
+body.fs button.nav.liten{opacity:.35}
+body.fs button.nav.liten:hover,body.fs button.nav.liten:focus-visible{opacity:1}
+/* ---------- bildebryter og synkronisering ---------- */
+/* Bryteren står i headeren sammen med alt annet som skal være synlig i alle
+   fire bildene. Radioknapper og ikke knapper: nettleseren holder selv styr på
+   hvilken som er valgt, og tastaturnavigering følger med gratis. */
+.bryter{display:flex;gap:4px;background:var(--surface);border:1px solid var(--line);
+  border-radius:999px;padding:3px;flex:none}
+.bryter label{font:600 clamp(12px,.9vw,16px)/1 var(--f-body);padding:.5em 1.1em;
+  border-radius:999px;cursor:pointer;color:var(--muted);white-space:nowrap}
+.bryter input{position:absolute;opacity:0;pointer-events:none}
+.bryter input:checked + span{color:#fff}
+.bryter label:has(input:checked){background:var(--accent)}
+.bryter label:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+/* Diskré med vilje: lagringen er alltid i orden lokalt, så dette er en
+   kvittering og ikke et varsel. Et rødt felt hver gang nettet hikker ville
+   stjålet oppmerksomheten fra hypotesen folk skal lese. */
+#sync{font:500 clamp(11px,.8vw,14px)/1 var(--f-mono);color:var(--muted);
+  opacity:0;transition:opacity .25s;flex:none}
+#sync.vis{opacity:.75}
+#meg{font:500 clamp(11px,.8vw,14px)/1 var(--f-body);color:var(--muted);flex:none;
+  background:none;border:0;cursor:pointer;text-decoration:underline dotted}
+
+/* ---------- navnevalg ---------- */
+/* Dekker hele flata framfor å ligge i hjørnet: navnet må være satt før noen
+   vurderer noe, ellers havner stemmene på «undefined» og kan ikke telles. */
+#navnegate{position:fixed;inset:0;z-index:50;background:var(--bg);
+  display:none;align-items:center;justify-content:center;padding:24px}
+body.uten-navn #navnegate{display:flex}
+.gate{background:var(--surface);border:1px solid var(--line);border-radius:14px;
+  padding:clamp(20px,3vw,40px);max-width:560px;width:100%;display:grid;gap:14px}
+.gate h2{font-family:var(--f-display);margin:0;font-size:clamp(20px,2vw,30px)}
+.gate p{margin:0;color:var(--muted);font-size:15px}
+.gate select,.gate input{font:inherit;font-size:17px;padding:.6em .7em;
+  border:1px solid var(--line);border-radius:8px;background:#fff;color:inherit;width:100%}
+.gate button{font:600 17px/1 var(--f-body);background:var(--accent);color:#fff;
+  border:0;border-radius:8px;padding:.8em 1.2em;cursor:pointer}
+.gate button:disabled{opacity:.45;cursor:default}
+
+/* ---------- vurdering ---------- */
+.vurder-rad{display:none;gap:clamp(8px,1vw,16px);flex:none;
+  padding-top:clamp(10px,1.4vh,18px)}
+body.m-vurder .vurder-rad{display:flex}
+/* Store knapper: ti minutter på ni hypoteser betyr at ingen skal sikte. */
+.vbtn{flex:1;font:600 clamp(14px,1.2vw,22px)/1.2 var(--f-body);cursor:pointer;
+  background:var(--surface);border:2px solid var(--line);border-radius:12px;
+  padding:clamp(10px,1.4vh,20px) 12px;color:var(--ink);display:flex;
+  align-items:center;justify-content:center;gap:.6em}
+.vbtn:hover{border-color:var(--pf)}
+.vbtn[aria-pressed="true"]{background:var(--pf);border-color:var(--pf);color:#fff}
+.vbtn[data-p="maa"]{--pf:var(--p-maa)}
+.vbtn[data-p="bor"]{--pf:var(--p-bor)}
+.vbtn[data-p="vent"]{--pf:var(--p-vent)}
+/* Markeringen på oversiktskortet: en liten pille i merkelinja. Fargen alene
+   holder ikke — rød/grønn-blindhet er vanlig nok i et rom på tjueen. */
+.pri{font:700 11px/1 var(--f-mono);letter-spacing:.06em;color:#fff;
+  border-radius:999px;padding:.4em .7em;margin-left:auto}
+.pri[data-p="maa"]{background:var(--p-maa)}
+.pri[data-p="bor"]{background:var(--p-bor)}
+.pri[data-p="vent"]{background:var(--p-vent)}
+
+/* ---------- resultat ---------- */
+#resultat,#gruppe{display:none;flex:1;min-height:0}
+body.m-resultat #resultat{display:grid;grid-template-rows:auto 1fr}
+body.m-gruppe #gruppe{display:grid;grid-template-rows:auto 1fr auto}
+.res-topp{display:flex;align-items:baseline;gap:18px;color:var(--muted);
+  font-size:clamp(13px,1vw,18px);margin-bottom:clamp(8px,1.2vh,16px)}
+.res-liste{display:grid;gap:clamp(5px,.7vh,12px);grid-auto-rows:1fr;min-height:0}
+.res-rad{display:grid;grid-template-columns:auto minmax(0,1fr) auto;
+  align-items:center;gap:clamp(10px,1.2vw,22px);min-height:0}
+.res-nr{font:700 clamp(13px,1.1vw,22px)/1 var(--f-mono);color:var(--muted)}
+.res-tekst{font-size:clamp(12px,min(1.05vw,2vh),20px);line-height:1.25;
+  overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical}
+/* Stolpen er stablet og ikke tre adskilte: rommet skal se andelen ✅ i
+   forhold til helheten, ikke tre tall som må summeres i hodet. */
+.res-stolpe{display:flex;height:clamp(16px,2.4vh,30px);width:clamp(180px,26vw,460px);
+  border-radius:6px;overflow:hidden;background:#dfe7ec;flex:none}
+.res-stolpe i{display:block;font:700 11px/1 var(--f-mono);color:#fff;
+  display:flex;align-items:center;justify-content:center;transition:flex-basis .4s}
+.res-stolpe i[data-p="maa"]{background:var(--p-maa)}
+.res-stolpe i[data-p="bor"]{background:var(--p-bor)}
+.res-stolpe i[data-p="vent"]{background:var(--p-vent)}
+/* Skillet ved plass 6–10 tegnes inn, fordi det er avgjørelsen rommet skal ta.
+   Uten linja må noen telle nedover mens de diskuterer. */
+.res-rad.snitt{border-top:2px dashed var(--warn);padding-top:clamp(4px,.6vh,10px)}
+
+/* ---------- gruppearbeid ---------- */
+.g-midt{display:grid;align-content:start;gap:clamp(10px,1.6vh,20px);
+  max-width:900px;width:100%;margin:0 auto;min-height:0;overflow:hidden}
+.g-pastand{margin:0;font-family:var(--f-display);font-weight:600;
+  font-size:clamp(17px,1.8vw,30px);line-height:1.25}
+.g-felt{display:grid;gap:6px;min-height:0}
+.g-felt > label{font:600 clamp(12px,.95vw,17px)/1.2 var(--f-body);color:var(--muted)}
+.g-felt textarea{font:inherit;font-size:clamp(13px,1vw,18px);padding:.6em .7em;
+  border:1px solid var(--line);border-radius:8px;resize:none;background:#fff;
+  color:inherit;width:100%;min-height:clamp(52px,9vh,110px)}
+.g-ja{display:flex;gap:10px}
+.g-ja button{font:600 clamp(13px,1vw,18px)/1 var(--f-body);background:var(--surface);
+  border:2px solid var(--line);border-radius:999px;padding:.55em 1.4em;cursor:pointer;color:inherit}
+.g-ja button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+
+@media print{.hjelp,.bunn button,#fullskjerm{display:none}}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Nordlys · forslag til hypoteser</h1>
+  <span class="status">Forslag — ikke vedtatt</span>
+  <span class="sub" id="sub"></span>
+  <span class="spacer"></span>
+  <div class="bryter" id="bryter">
+    <label><input type="radio" name="bilde" value="les" checked><span>Les</span></label>
+    <label><input type="radio" name="bilde" value="vurder"><span>Vurder</span></label>
+    <label><input type="radio" name="bilde" value="resultat"><span>Resultat</span></label>
+    <label><input type="radio" name="bilde" value="gruppe"><span>Gruppe</span></label>
+  </div>
+  <span id="sync"></span>
+  <button type="button" id="meg"></button>
+  <button class="nav liten" type="button" id="fullskjerm">Fullskjerm</button>
+  <span class="hjelp" id="hjelp">Klikk en hypotese · ← → blar · F fullskjerm</span>
+</header>
+
+<div id="oversikt"></div>
+
+<div id="enkelt">
+  <div></div>
+  <div class="midt">
+    <div class="lev" id="e-lev"></div>
+    <p class="pastand" id="e-pastand"></p>
+    <p class="nar" id="e-nar"></p>
+  </div>
+  <div class="vurder-rad" id="vurder-rad">
+    <button class="vbtn" type="button" data-p="maa"  aria-pressed="false">✅ Må avklares</button>
+    <button class="vbtn" type="button" data-p="bor"  aria-pressed="false">🟡 Bør avklares</button>
+    <button class="vbtn" type="button" data-p="vent" aria-pressed="false">⚪ Kan vente</button>
+  </div>
+  <div class="bunn">
+    <button class="nav" type="button" id="forrige">← Forrige</button>
+    <span class="teller" id="teller"></span>
+    <button class="nav" type="button" id="neste">Neste →</button>
+    <span class="spacer"></span>
+    <span id="e-lev-navn"></span>
+  </div>
+</div>
+
+<div id="resultat">
+  <div class="res-topp">
+    <span><strong id="r-deltakere">0</strong> har svart</span>
+    <span class="hjelp">Sortert etter ✅ · stiplet linje markerer plass 10 · oppdateres hvert 5. sekund</span>
+  </div>
+  <div class="res-liste" id="r-liste"></div>
+</div>
+
+<div id="gruppe">
+  <div></div>
+  <div class="g-midt">
+    <div class="lev" id="g-lev"></div>
+    <p class="g-pastand" id="g-pastand"></p>
+    <div class="g-felt">
+      <label>Er den formulert godt nok?</label>
+      <div class="g-ja">
+        <button type="button" id="g-ja" aria-pressed="false">Ja</button>
+        <button type="button" id="g-nei" aria-pressed="false">Nei</button>
+      </div>
+    </div>
+    <div class="g-felt">
+      <label for="g-forenkling">Kan den forenkles? Hvordan?</label>
+      <textarea id="g-forenkling"></textarea>
+    </div>
+    <div class="g-felt">
+      <label for="g-validering">Hvordan skal vi validere den?</label>
+      <textarea id="g-validering"></textarea>
+    </div>
+  </div>
+  <div class="bunn">
+    <button class="nav" type="button" id="g-forrige">← Forrige</button>
+    <span class="teller" id="g-teller"></span>
+    <button class="nav" type="button" id="g-neste">Neste →</button>
+  </div>
+</div>
+
+<div id="navnegate">
+  <form class="gate" id="gate-form">
+    <h2>Hvem er du?</h2>
+    <p>Ingen innlogging. Navnet lagres bare i denne nettleseren, og brukes til å
+       telle hvem i rommet som har svart.</p>
+    <select id="gate-valg">
+      <option value="">— velg navnet ditt —</option>
+    </select>
+    <input id="gate-fritekst" type="text" placeholder="…eller skriv navnet ditt" autocomplete="off">
+    <button type="submit" id="gate-ok" disabled>Fortsett</button>
+  </form>
+</div>
+
+<script src="config.js"></script>
+<script>
+/* Leveransene ligger her som data og ikke som klassenavn i CSS-en, av samme
+   grunn som i hovedappen: en omdøping skal ikke kreve at noen leter i et
+   stilark. Hentet fra public.deliverables. */
+const LEVERANSER = {
+  malbilde:    {nr:1, label:"Målbilde og omfang"},
+  forankring:  {nr:2, label:"Forankring hos sentrale aktører"},
+  teknisk:     {nr:3, label:"Gjennomførbar teknisk retning"},
+  styring:     {nr:4, label:"Avklart styrings- og eierskapsmodell"},
+  juridisk:    {nr:5, label:"Juridiske og sikkerhetsmessige avklaringer"},
+  brukerbehov: {nr:6, label:"Validert brukerbehov og bruksområder"},
+  beslutning:  {nr:7, label:"Beslutningsgrunnlag for videreføring"},
+  forpliktelse:{nr:8, label:"Forpliktelse og støtte for videreføring"}
+};
+
+/* Registeret slik det sto 26.10.2026. Bakt inn med vilje — se kommentaren
+   øverst. Hentes på nytt med skriptet i bunnen av denne fila. */
+const HYP = [
+ {nr:1, lev:"brukerbehov",
+  tekst:"sikkerhetsanalytikere faktisk vil dele egne observasjoner utenfor egen virksomhet, og ikke bare konsumere andres",
+  krit:"operativt personell i minst tre selskaper har beskrevet hva de konkret ville delt, og hva som stopper dem"},
+ {nr:2, lev:"malbilde",
+  tekst:"delt situasjonsbilde reduserer tiden fra en lokal observasjon oppstår til andre aktører kan iverksette tiltak",
+  krit:"vi har en baseline fra 2–3 historiske hendelser, og det samme forløpet er målt i PoC-demoen"},
+ {nr:11, lev:"styring",
+  tekst:"KraftCERT påtar seg rollen som tillitsanker og identitetsutsteder — eller det finnes en gjennomførbar alternativ forvaltningsmodell, med rom for å legge til flere likestilte ankre som NVE og NSM senere",
+  krit:"KraftCERT har gitt skriftlig tilbakemelding før styringsgruppemøte #3, og alternative modeller er utredet og vurdert før Go/No-Go"},
+ {nr:14, lev:"juridisk",
+  tekst:"kraftsensitiv informasjon kan deles innenfor kraftberedskapsforskriften § 6-2 og § 6-3 og konkurranseloven § 10, og NVE støtter løsningen",
+  krit:"NVE har gitt tilbakemelding på et utkast til klassifiserings- og delingsprofil, og en juridisk analyse av den konkurranserettslige avgrensningen foreligger"},
+ {nr:22, lev:"forankring",
+  tekst:"minst tre virksomheter vil delta i en pilot på de vilkårene vi kan tilby, og løsningen kan testes i et realistisk miljø uten uakseptabel risiko for driftskontrollsystemene",
+  krit:"tre selskaper har bekreftet skriftlig at de stiller med ressurser og testmiljø, og en risikovurdering av pilotoppsettet er gjennomført og akseptert av sikkerhetsansvarlig i de deltakende selskapene"},
+ {nr:26, lev:"styring",
+  tekst:"hver virksomhet har kapasitet til selv å drifte en node og en Varde i daglig drift",
+  krit:"hver deltaker har bekreftet driftskapasitet, eller det foreligger en avklart modell med driftsleverandør for de mindre aktørene"},
+ {nr:28, lev:"malbilde",
+  tekst:"dagens løsninger betjener bare den delen av sektoren som har infrastruktur, kompetanse og bemanning til å drifte dem. Nordlys når resten — med lav etableringsterskel, utvidbarhet utover cybersikkerhetsdata, og uten at lav terskel forutsetter at noen andre eier dataene dine.",
+  krit:"et notat som (a) tallfester hvor stor del av KBO-enhetene som i dag står utenfor enhver delingsordning, og hvorfor, (b) sammenligner Nordlys mot MISP som gjest hos KraftCERT og mot egen MISP-instans, på etableringsterskel og på hvem som eier og ser dataene, og (c) viser minst én ikke-CTI datatype sektoren trenger, som MISPs datamodell ikke bærer uten kjerneendring. (Motbevis: de små aktørene er godt nok betjent av en gjestekonto hos KraftCERT, og den sentraliseringen er en pris de aksepterer.)"},
+ {nr:29, lev:"malbilde",
+  tekst:"deltakerne oppdager og handler på delte indikatorer i tide bare hvis plattformen varsler dem aktivt i kanalen de allerede står i. En løsning som krever at de selv logger inn og sjekker, blir valgt bort til fordel for Teams eller e-post. Varselvolumet må samtidig være lavt nok til at varslene ikke blir ignorert.",
+  krit:"vi i en pilot har sett at minst 2 av 3 deltakende selskaper reagerer (åpner eller kvitterer) på et relevant varsel innen 1 time, at varselvolum og relevans per mottaker er målt, og at drift- og OT-personell har brukt grensesnittet under en øvelse og ikke bare i etterkant. (Motbevis: de sjekker plattformen jevnlig uten varsler, eller ignorerer varslene.)"},
+ {nr:30, lev:"malbilde",
+  tekst:"delte indikatorer er presise og ferske nok til at mottakeren kan handle på dem uten å verifisere dem selv først",
+  krit:"i en pilot er andelen delte indikatorer som faktisk førte til et tiltak målt, og analytikerne har vurdert treffsikkerheten. (Motbevis: indikatorene må verifiseres manuelt uansett — da er tidsgevinsten i H-02 borte.)"}
+];
+
+const $ = id => document.getElementById(id);
+const levFarge = s => `var(--l-${s}, var(--accent))`;
+const levNr    = s => (LEVERANSER[s]||{}).nr || "–";
+const levNavn  = s => (LEVERANSER[s]||{}).label || s;
+const hNr      = n => "H-" + String(n).padStart(2,"0");
+const PRI_KORT = {maa:"✅ MÅ", bor:"🟡 BØR", vent:"⚪ VENT"};
+
+let idx = 0;
+
+/* ---------- deltakerliste ---------- */
+/* Lista ligger i fila og ikke i databasen, av samme grunn som EIERE i
+   index.html: deltakerlista for én workshop endrer seg helt til morgenen den
+   går av stabelen, og en avmelding skal ikke koste en migrasjon. Fritekst i
+   tillegg, så en gjest som ikke sto på lista kan delta uten at noen må
+   redigere fila midt i møtet. */
+const DELTAKERE = [
+ "Dag Efjestad","Jan Erik Ankervig Trydal","Michiel Tarald Engeland","Kristin Kopland",
+ "Tommy Skaug","Anders Prytz","Andreas Helsinghof","Ulf Trondsen",
+ "Ingvild Nyløkken Kristensson","Sigurd Biørn","Vegard Johnsen","Bore (KraftCERT)",
+ "Espen Endal","Margrete Raaum","Peder Stray","Inge Brattås","Aeshwarya Bharadwaj",
+ "Christoffer","Dan Solberg","Ingvil Gaasland","Thomas Andre Bennett"
+];
+
+/* ---------- lagring ---------- */
+/* Hele poenget med rekkefølgen her: localStorage skrives SYNKRONT først, og
+   først deretter går kallet mot Supabase. Faller nettet ut midt i steg 2 —
+   og møterommets gjestenett er ikke til å stole på — skal deltakeren ikke
+   merke det, og ingen vurdering skal gå tapt. Backenden er en kopi, ikke
+   sannheten, helt til workshopen er over. */
+const NOKKEL = {navn:"nordlys-ws-navn", pri:"nordlys-ws-prioritet", grp:"nordlys-ws-gruppe"};
+const les  = (k,d) => { try{ return JSON.parse(localStorage.getItem(k)) ?? d; }catch(_){ return d; } };
+const skriv = (k,v) => { try{ localStorage.setItem(k, JSON.stringify(v)); }catch(_){} };
+
+let navn = les(NOKKEL.navn, "");
+let pri  = les(NOKKEL.pri, {});   // {nr: 'maa'|'bor'|'vent'}
+let grp  = les(NOKKEL.grp, {});   // {nr: {god_nok, forenkling, validering}}
+
+const CFG = window.NORDLYS_CONFIG || {};
+let synkTimer = 0;
+function synkStatus(tekst){
+  const el = $("sync");
+  el.textContent = tekst;
+  el.classList.add("vis");
+  clearTimeout(synkTimer);
+  synkTimer = setTimeout(() => el.classList.remove("vis"), 2500);
+}
+
+/* Feil logges i konsollen og stopper der. En deltaker som får en rød boks
+   fordi wifi-et hikker, slutter å vurdere — og vurderingen ligger uansett
+   trygt lokalt. */
+async function rpc(fn, args){
+  if(!CFG.supabaseUrl || !CFG.supabaseKey) return null;
+  const r = await fetch(`${CFG.supabaseUrl}/rest/v1/rpc/${fn}`, {
+    method:"POST",
+    headers:{apikey:CFG.supabaseKey, "Content-Type":"application/json"},
+    body:JSON.stringify(args)
+  });
+  if(!r.ok) throw new Error(`${fn}: ${r.status}`);
+  const t = await r.text();
+  return t ? JSON.parse(t) : null;
+}
+function send(fn, args, kvittering){
+  /* try/catch rundt selve kallet også: en stubbet eller blokkert fetch kan
+     kaste synkront, og da ville .catch() aldri blitt nådd. */
+  try{
+    Promise.resolve(rpc(fn, args))
+      .then(() => { if(kvittering) synkStatus("Sendt ✓"); })
+      .catch(e => console.warn("Synk feilet, lagret lokalt:", e));
+  }catch(e){ console.warn("Synk feilet, lagret lokalt:", e); }
+}
+
+/* ---------- navnevalg ---------- */
+function visNavnegate(){
+  document.body.classList.add("uten-navn");
+  $("gate-valg").focus();
+}
+function settNavn(n){
+  navn = n.trim();
+  skriv(NOKKEL.navn, navn);
+  document.body.classList.remove("uten-navn");
+  $("meg").textContent = navn;
+  /* Det som allerede ligger lokalt er ikke nødvendigvis sendt — enten fordi
+     nettet var nede, eller fordi navnet manglet da det ble registrert. */
+  Object.entries(pri).forEach(([nr,p]) => send("ws_sett_prioritet",{p_navn:navn,p_nr:+nr,p_prioritet:p}));
+}
+
+
+/* ---------- oversikt ---------- */
+/* Knapp og ikke div: oversikten skal kunne tabbes gjennom. Den som
+   projiserer bruker mus, men den som forbereder seg gjør det ikke. */
+function tegnOversikt(){
+  $("oversikt").replaceChildren(...HYP.map((x,i)=>{
+    const k = document.createElement("button");
+    k.type = "button";
+    k.className = "kort";
+    k.style.setProperty("--lev", levFarge(x.lev));
+    k.onclick = () => vis(i);
+
+    const m = document.createElement("div");
+    m.className = "merke";
+    const p = document.createElement("span"); p.className = "prikk";
+    m.append(p, document.createTextNode(`${hNr(x.nr)} · L${levNr(x.lev)}`));
+    /* Egen markering på kortet: oversikten er det eneste stedet man ser hva
+       man har rukket å vurdere og hva som gjenstår. */
+    if(pri[x.nr]){
+      const pill = document.createElement("span");
+      pill.className = "pri";
+      pill.dataset.p = pri[x.nr];
+      pill.textContent = PRI_KORT[pri[x.nr]];
+      m.append(pill);
+    }
+
+    const t = document.createElement("p");
+    t.textContent = x.tekst;
+
+    k.append(m, t);
+    return k;
+  }));
+  $("sub").textContent = `${HYP.length} forslag til vurdering — ingenting er besluttet`;
+  tilpassOversikt();
+}
+
+/* Hvor mange linjer det er plass til følger av skjermen, ikke av teksten:
+   fem på 1080p, tre på 720p. Regnes det ikke ut, klipper kortet midt i en
+   bokstavlinje — halve bokstaver langs underkanten leses som en feil, ikke
+   som «det står mer her», og ellipsen uteblir fordi line-clamp aldri nås.
+   Plassen måles på ett kort: alle er like høye, rutenettet gir dem 1fr. */
+const MAKS_LINJER = 5;
+function tilpassOversikt(){
+  const k = $("oversikt").firstElementChild;
+  if(!k) return;
+  const cs = getComputedStyle(k);
+  const px = n => parseFloat(cs[n]) || 0;
+  const plass = k.getBoundingClientRect().height
+    - px("paddingTop") - px("paddingBottom")
+    - px("borderTopWidth") - px("borderBottomWidth")
+    - k.querySelector(".merke").getBoundingClientRect().height
+    - px("rowGap");
+  const lh = parseFloat(getComputedStyle(k.querySelector("p")).lineHeight);
+  /* Kortets høyde er låst av grid-auto-rows:1fr, så dette kan ikke løkke. */
+  const linjer = Math.max(1, Math.min(MAKS_LINJER, Math.floor(plass / lh + 0.02)));
+  $("oversikt").style.setProperty("--linjer", linjer);
+}
+
+/* ---------- én om gangen ---------- */
+function vis(i){
+  idx = Math.max(0, Math.min(i, HYP.length-1));
+  const x = HYP[idx];
+  document.body.classList.add("en");
+  document.body.style.setProperty("--lev", levFarge(x.lev));
+
+  const lev = $("e-lev");
+  const p = document.createElement("span"); p.className = "prikk";
+  lev.replaceChildren(p, document.createTextNode(`${hNr(x.nr)} · L${levNr(x.lev)}`));
+
+  /* «Vi tror at» og «Vi vet det når» er rammen hele registeret er skrevet i.
+     Uten dem leses påstanden som et utsagn, og da er den ikke lenger en
+     hypotese noen kan være uenig i. */
+  $("e-pastand").replaceChildren(
+    Object.assign(document.createElement("span"),{className:"pre",textContent:"Vi tror at "}),
+    document.createTextNode(x.tekst));
+  $("e-nar").replaceChildren(
+    Object.assign(document.createElement("span"),{className:"pre",textContent:"Vi vet det når "}),
+    document.createTextNode(x.krit));
+
+  $("teller").textContent = `${idx+1} av ${HYP.length}`;
+  $("e-lev-navn").textContent = levNavn(x.lev);
+  $("forrige").disabled = idx <= 0;
+  $("neste").disabled   = idx >= HYP.length-1;
+  $("hjelp").textContent = "← → blar · Backspace tilbake · F fullskjerm";
+  oppdaterVurderKnapper();
+  tilpass();
+}
+
+/* Tekstene er svært ulike i lengde — H-26 er én linje, H-28 og H-29 er
+   avsnitt. Med fast skriftstørrelse dyttet de lange bunnlinja over en
+   skjermhøyde ned, altså ut av bildet på en projektor. Her krympes i stedet
+   skriften til innholdet faktisk får plass, slik at bunnlinja står stille og
+   hele teksten er synlig. De korte beholder full størrelse. */
+const MIN_SKALA = 0.4;
+function tilpass(){
+  const m = document.querySelector(".midt");
+  m.style.setProperty("--skala", 1);
+  /* Ett steg om gangen framfor binærsøk: tekst reflyter i hopp når en linje
+     forsvinner, så høyden er ikke monoton nok til at binærsøk treffer. */
+  for(let s = 1; s > MIN_SKALA && m.scrollHeight > m.clientHeight; s -= 0.02){
+    m.style.setProperty("--skala", Math.round(s*100)/100);
+  }
+}
+/* Projektoren skifter ofte oppløsning når kabelen settes i. */
+addEventListener("resize", () => {
+  if(document.body.classList.contains("en")) tilpass(); else tilpassOversikt();
+});
+
+function tilOversikt(){
+  document.body.classList.remove("en");
+  document.body.style.removeProperty("--lev");
+  $("hjelp").textContent = "Klikk en hypotese · ← → blar · F fullskjerm";
+  tilpassOversikt();
+  /* Fokus tilbake på kortet man kom fra, ellers mister den som bruker
+     tastatur stedet sitt i rutenettet. */
+  const k = $("oversikt").children[idx];
+  if(k) k.focus();
+}
+
+const bla = d => vis(idx + d);
+$("forrige").onclick = () => bla(-1);
+$("neste").onclick   = () => bla(1);
+
+/* Lytteren står på document og ikke på et kort: kortene byttes ut når
+   oversikten tegnes.
+
+   Tidligere slapp «Forrige/Neste» alle taster forbi når de hadde fokus, og
+   da var Esc død etter hvert museklikk på dem. Rettelsen var å slippe forbi
+   bare piltastene — men en <button> gjør ingenting med piltaster, så den
+   fritaket beskyttet ingen oppførsel. Det det faktisk gjorde var å drepe
+   «← → blar» så snart fasilitatoren hadde klikket Neste én gang, altså
+   midt i framføringen. Derfor håndteres alle tastene her nå; knappene
+   trenger bare Enter og mellomrom, og dem rører vi ikke. */
+document.addEventListener("keydown", e => {
+  /* Står markøren i et skrivefelt er tastene gruppas tekst, ikke navigering.
+     Uten dette ville en «f» i «forenkles» slått på fullskjerm midt i en
+     setning. */
+  const t = e.target;
+  if(t && (t.tagName === "TEXTAREA" || t.tagName === "INPUT" || t.tagName === "SELECT")) return;
+
+  if(modus === "gruppe"){
+    if(e.key === "ArrowRight"){ e.preventDefault(); visGruppe(gIdx+1); }
+    else if(e.key === "ArrowLeft"){ e.preventDefault(); visGruppe(gIdx-1); }
+    else if(e.key === "f" || e.key === "F"){ e.preventDefault(); vekslFullskjerm(); }
+    return;
+  }
+  if(modus === "resultat"){
+    if(e.key === "f" || e.key === "F"){ e.preventDefault(); vekslFullskjerm(); }
+    return;
+  }
+  /* I vurderingsbildet er enkeltvisningen hele bildet — det finnes ingen
+     oversikt å gå tilbake til, så Esc og Backspace skal ikke gjøre noe. */
+  const en = document.body.classList.contains("en") && modus === "les";
+  if(e.key === "ArrowRight" || e.key === "PageDown"){
+    e.preventDefault(); (en || modus === "vurder") ? bla(1) : vis(0);
+  } else if(e.key === "ArrowLeft" || e.key === "PageUp"){
+    e.preventDefault(); if(en || modus === "vurder") bla(-1);
+  } else if(e.key === "Escape"){
+    /* Nettleseren går selv ut av fullskjerm på Esc, og det kan vi ikke hindre.
+       Gjorde vi i tillegg vår egen navigering, ville ett tastetrykk gjort to
+       ting: fasilitatoren mistet både fullskjermen og hypotesen hun sto på.
+       I fullskjerm betyr Esc derfor bare «ut av fullskjerm». Veien tilbake til
+       oversikten er Backspace, som virker uansett. */
+    if(document.fullscreenElement) return;
+    if(en) tilOversikt();
+  } else if(e.key === "Backspace"){
+    e.preventDefault(); if(en) tilOversikt();
+  } else if(e.key === "f" || e.key === "F"){
+    e.preventDefault(); vekslFullskjerm();
+  } else if(e.key === "Home" && en){
+    e.preventDefault(); vis(0);
+  } else if(e.key === "End" && en){
+    e.preventDefault(); vis(HYP.length-1);
+  }
+});
+
+/* ---------- fullskjerm ---------- */
+/* Egen knapp framfor å stole på F11: den som projiserer står som regel i en
+   annen nettleser enn sin egen, på en maskin hun ikke eier, og F11 er ikke
+   den samme tasten på alle oppsett. Kallet må dessuten komme fra en ekte
+   brukerhandling — nettleseren avviser det ellers. */
+function vekslFullskjerm(){
+  const d = document.documentElement;
+  if(!document.fullscreenElement){
+    (d.requestFullscreen || d.webkitRequestFullscreen || (()=>{})).call(d);
+  } else {
+    (document.exitFullscreen || document.webkitExitFullscreen || (()=>{})).call(document);
+  }
+}
+$("fullskjerm").onclick = vekslFullskjerm;
+
+/* Vi lytter på hendelsen i stedet for å gjette etter klikket: brukeren kan
+   gå ut med Esc eller F11 uten å røre knappen, og da må teksten følge med. */
+document.addEventListener("fullscreenchange", () => {
+  const pa = !!document.fullscreenElement;
+  document.body.classList.toggle("fs", pa);
+  $("fullskjerm").textContent = pa ? "Avslutt fullskjerm" : "Fullskjerm";
+});
+
+/* Er API-et ikke tilgjengelig (noen nettlesere i iframe), skal knappen vekk
+   framfor å stå og ikke virke. */
+if(!document.documentElement.requestFullscreen && !document.documentElement.webkitRequestFullscreen)
+  $("fullskjerm").hidden = true;
+
+/* ---------- vurdering (steg 2) ---------- */
+function oppdaterVurderKnapper(){
+  const valgt = pri[HYP[idx] && HYP[idx].nr];
+  $("vurder-rad").querySelectorAll(".vbtn").forEach(b =>
+    b.setAttribute("aria-pressed", String(b.dataset.p === valgt)));
+}
+function settPrioritet(p){
+  const nr = HYP[idx].nr;
+  pri[nr] = p;
+  skriv(NOKKEL.pri, pri);          // synkront, før nettverket. Se kommentar over.
+  synkStatus("Lagret lokalt");
+  oppdaterVurderKnapper();
+  send("ws_sett_prioritet", {p_navn:navn, p_nr:nr, p_prioritet:p}, true);
+  /* Automatisk videre: ti minutter på ni hypoteser er knapt, og et ekstra
+     klikk per hypotese er nesten ett minutt av dem. Siste hypotese blir
+     stående — da er man ferdig, og et hopp tilbake til start ville sett ut
+     som om svaret ikke ble registrert. */
+  if(idx < HYP.length - 1) setTimeout(() => vis(idx + 1), 160);
+}
+$("vurder-rad").querySelectorAll(".vbtn").forEach(b =>
+  b.onclick = () => settPrioritet(b.dataset.p));
+
+/* ---------- bildebryter ---------- */
+let modus = "les";
+let pollTimer = 0;
+function settModus(m){
+  modus = m;
+  document.body.classList.remove("m-les","m-vurder","m-resultat","m-gruppe");
+  document.body.classList.add("m-" + m);
+  const r = $("bryter").querySelector(`input[value="${m}"]`);
+  if(r) r.checked = true;
+
+  clearTimeout(pollTimer);
+  if(m === "vurder"){
+    /* Vurderingsbildet ER enkeltvisningen. Står man i oversikten når man
+       bytter, må den åpnes — ellers møter deltakeren en tom skjerm. */
+    vis(idx);
+    $("hjelp").textContent = "Velg én · blar automatisk videre · ← → blar";
+  } else if(m === "les"){
+    document.body.classList.remove("en");
+    tegnOversikt();
+    $("hjelp").textContent = "Klikk en hypotese · ← → blar · F fullskjerm";
+  } else if(m === "resultat"){
+    $("hjelp").textContent = "Oppdateres automatisk";
+    hentStatus();
+  } else if(m === "gruppe"){
+    $("hjelp").textContent = "← → blar mellom hypotesene";
+    visGruppe(gIdx);
+  }
+}
+$("bryter").addEventListener("change", e => settModus(e.target.value));
+
+/* ---------- resultat (steg 3) ---------- */
+/* Grensen rommet skal lande på er 6–10. Linja tegnes ved 10, fordi det er
+   taket: alt under streken er det ingen tvil om at kan vente. */
+const SNITT = 10;
+function tegnResultat(st){
+  $("r-deltakere").textContent = (st && st.deltakere) || 0;
+  const tall = Object.create(null);
+  ((st && st.prioritet) || []).forEach(p => tall[p.nr] = p);
+  const rader = HYP.map(x => {
+    const t = tall[x.nr] || {};
+    return {x, maa:+t.maa||0, bor:+t.bor||0, vent:+t.vent||0};
+  }).sort((a,b) => b.maa - a.maa || b.bor - a.bor || a.x.nr - b.x.nr);
+
+  $("r-liste").replaceChildren(...rader.map((r,i) => {
+    const rad = document.createElement("div");
+    rad.className = "res-rad" + (i === SNITT ? " snitt" : "");
+    const nr = document.createElement("div");
+    nr.className = "res-nr"; nr.textContent = hNr(r.x.nr);
+    nr.style.color = levFarge(r.x.lev);
+    const tx = document.createElement("div");
+    tx.className = "res-tekst"; tx.textContent = r.x.tekst;
+    const st2 = document.createElement("div");
+    st2.className = "res-stolpe";
+    const sum = r.maa + r.bor + r.vent;
+    ["maa","bor","vent"].forEach(p => {
+      if(!r[p]) return;
+      const i2 = document.createElement("i");
+      i2.dataset.p = p;
+      i2.style.flex = `${r[p]} 0 0`;
+      /* Tallet står inne i stolpen bare når det er plass: et siffer som
+         flyter ut over kanten leses som en feil på en projektor. */
+      if(r[p] / sum > 0.12) i2.textContent = r[p];
+      st2.append(i2);
+    });
+    rad.append(nr, tx, st2);
+    return rad;
+  }));
+}
+async function hentStatus(){
+  try{
+    const st = await rpc("ws_status", {});
+    tegnResultat(st && (Array.isArray(st) ? st[0] : st));
+  }catch(e){
+    console.warn("ws_status feilet:", e);
+    tegnResultat(null);
+  }
+  if(modus === "resultat") pollTimer = setTimeout(hentStatus, 5000);
+}
+
+/* ---------- gruppearbeid (steg 4) ---------- */
+let gIdx = 0;
+let gSkitten = false;   // sant mens et fritekstfelt har ulagret tekst
+let gTimer = 0;
+const gData = nr => (grp[nr] = grp[nr] || {god_nok:null, forenkling:"", validering:""});
+
+function visGruppe(i){
+  gIdx = Math.max(0, Math.min(i, HYP.length-1));
+  const x = HYP[gIdx], d = gData(x.nr);
+  document.body.style.setProperty("--lev", levFarge(x.lev));
+  const p = document.createElement("span"); p.className = "prikk";
+  $("g-lev").replaceChildren(p, document.createTextNode(`${hNr(x.nr)} · ${levNavn(x.lev)}`));
+  $("g-pastand").textContent = "Vi tror at " + x.tekst;
+  /* Feltene bygges aldri på nytt — bare verdien settes, og bare når bruker
+     ikke står og skriver i dem. Rives en <textarea> ned mens den har fokus,
+     mister gruppa både teksten og markøren, og det er det eneste stedet i
+     verktøyet der noe faktisk ikke kan gjenskapes. */
+  ["forenkling","validering"].forEach(f => {
+    const el = $("g-" + f);
+    if(document.activeElement !== el) el.value = d[f] || "";
+  });
+  $("g-ja").setAttribute("aria-pressed", String(d.god_nok === true));
+  $("g-nei").setAttribute("aria-pressed", String(d.god_nok === false));
+  $("g-teller").textContent = `${gIdx+1} av ${HYP.length}`;
+  $("g-forrige").disabled = gIdx <= 0;
+  $("g-neste").disabled   = gIdx >= HYP.length-1;
+}
+function lagreGruppe(nå){
+  const x = HYP[gIdx], d = gData(x.nr);
+  d.forenkling = $("g-forenkling").value;
+  d.validering = $("g-validering").value;
+  skriv(NOKKEL.grp, grp);          // synkront først, alltid
+  synkStatus("Lagret lokalt");
+  clearTimeout(gTimer);
+  /* Debounce: hvert tastetrykk skal ikke bli et API-kall. 900 ms er valgt
+     fordi fire grupper som skriver samtidig ellers ville sendt hundrevis av
+     kall i minuttet mot den samme raden. */
+  const sendNå = () => {
+    gSkitten = false;
+    send("ws_sett_gruppe", {p_navn:navn, p_nr:x.nr, p_god_nok:d.god_nok,
+      p_forenkling:d.forenkling, p_validering:d.validering}, true);
+  };
+  gSkitten = true;
+  if(nå) sendNå(); else gTimer = setTimeout(sendNå, 900);
+}
+["g-forenkling","g-validering"].forEach(id => {
+  $(id).addEventListener("input", () => lagreGruppe(false));
+  $(id).addEventListener("blur",  () => { if(gSkitten) lagreGruppe(true); });
+});
+$("g-ja").onclick  = () => { gData(HYP[gIdx].nr).god_nok = true;  lagreGruppe(true); visGruppe(gIdx); };
+$("g-nei").onclick = () => { gData(HYP[gIdx].nr).god_nok = false; lagreGruppe(true); visGruppe(gIdx); };
+$("g-forrige").onclick = () => { if(gSkitten) lagreGruppe(true); visGruppe(gIdx-1); };
+$("g-neste").onclick   = () => { if(gSkitten) lagreGruppe(true); visGruppe(gIdx+1); };
+
+/* ---------- oppstart ---------- */
+const velg = $("gate-valg");
+DELTAKERE.forEach(n => velg.append(Object.assign(document.createElement("option"),{value:n,textContent:n})));
+const gateOk = () => $("gate-ok").disabled = !(velg.value || $("gate-fritekst").value.trim());
+velg.addEventListener("change", () => { if(velg.value) $("gate-fritekst").value = ""; gateOk(); });
+$("gate-fritekst").addEventListener("input", () => { if($("gate-fritekst").value) velg.value = ""; gateOk(); });
+$("gate-form").addEventListener("submit", e => {
+  e.preventDefault();
+  settNavn($("gate-fritekst").value.trim() || velg.value);
+});
+$("meg").onclick = () => visNavnegate();
+
+tegnOversikt();
+settModus("les");
+if(navn) $("meg").textContent = navn; else visNavnegate();
+
+</script>
+
+<!--
+  Hente registeret på nytt:
+
+    supabase db query --linked "select h.nr, h.leveranse, h.tekst, h.kriterium
+      from public.hypotheses h where h.deleted_at is null order by h.nr;"
+
+  og legg resultatet inn i HYP over. Arkiverte hypoteser (deleted_at satt)
+  skal ikke med — de er tatt ut av registeret med vilje.
+-->
+</body>
+</html>
