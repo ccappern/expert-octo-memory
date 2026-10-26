@@ -229,8 +229,6 @@ body.g-ny .g-midt:not(#g-nytt) > *:not(.g-navn):not(#g-mangler):not(#g-faner){di
 .g-mangler{margin:0;background:var(--warnbg);color:var(--warn);border:1px solid #e6c9a3;
   border-radius:8px;padding:.5em .8em;font-size:clamp(13px,1vw,17px);font-weight:600}
 .g-navn,.gate-kode{display:grid;gap:5px;font:600 13px/1.2 var(--f-body);color:var(--muted)}
-#n-leveranse{font:inherit;font-size:clamp(14px,1vw,18px);padding:.5em .7em;
-  border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink)}
 .g-navn input,.gate-kode input{font:inherit;font-weight:400;font-size:16px;color:var(--ink);
   padding:.5em .7em;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
 .g-navn input:focus,.gate-kode input:focus{outline:2px solid var(--accent);outline-offset:1px}
@@ -421,12 +419,6 @@ body.m-gruppe #gruppe{display:grid;grid-template-rows:auto 1fr auto}
     <div class="g-felt">
       <label for="n-kriterium">Vi vet det når …</label>
       <textarea id="n-kriterium" placeholder="hva som må ha skjedd for at den er avklart"></textarea>
-    </div>
-    <div class="g-felt">
-      <label for="n-leveranse">Hvilken leveranse hører den til?</label>
-      <select id="n-leveranse">
-        <option value="">— velg leveranse —</option>
-      </select>
     </div>
     <div class="g-faner">
       <button type="button" id="n-ny">+ Nytt forslag</button>
@@ -1015,12 +1007,6 @@ function tegnNye(rader){
     const topp = document.createElement("div");
     topp.className = "s-topp";
     topp.append(Object.assign(document.createElement("strong"),{textContent:r.navn}));
-    /* Nye forslag lagrer slug; eldre kunne inneholde fritekst. Faller tilbake
-       til råteksten, slik at ingenting forsvinner fra gjennomgangen. */
-    if(r.leveranse) topp.append(Object.assign(document.createElement("span"),
-      {className:"s-merke tom",
-       textContent: LEVERANSER[r.leveranse]
-         ? `L${levNr(r.leveranse)} ${levNavn(r.leveranse)}` : r.leveranse}));
     kort.append(topp);
     kort.append(Object.assign(document.createElement("p"),
       {className:"s-felt", textContent:"Vi tror at " + r.tekst}));
@@ -1116,22 +1102,11 @@ $("g-faner").addEventListener("click", e => {
 });
 
 /* ---------- manglende hypoteser ---------- */
-/* Leveransene fylles fra LEVERANSER, så lista er den samme her som på kortene.
-   Fritekst ga skrivefeil og synonymer — og poenget med økten er nettopp å
-   koble forslaget til en av leveransene, ikke til en omtrentlig formulering. */
-(function fyllLeveranser(){
-  const sel = $("n-leveranse");
-  Object.entries(LEVERANSER)
-    .sort((a,b) => a[1].nr - b[1].nr)
-    .forEach(([slug, l]) => sel.append(Object.assign(document.createElement("option"),
-      {value: slug, textContent: `L${l.nr} ${l.label}`})));
-})();
-
-const nData = () => (nye[nIdx] = nye[nIdx] || {lopenr: nIdx + 1, tekst:"", kriterium:"", leveranse:""});
+const nData = () => (nye[nIdx] = nye[nIdx] || {lopenr: nIdx + 1, tekst:"", kriterium:""});
 function visNy(){
   const d = nData();
   /* Samme regel som ellers: aldri overskriv et felt noen står og skriver i. */
-  for(const [id, f] of [["n-tekst","tekst"],["n-kriterium","kriterium"],["n-leveranse","leveranse"]])
+  for(const [id, f] of [["n-tekst","tekst"],["n-kriterium","kriterium"]])
     if(document.activeElement !== $(id)) $(id).value = d[f] || "";
   $("n-teller").textContent = nye.length > 1 ? `Forslag ${nIdx+1} av ${nye.length}` : "";
   manglerGruppe(!gruppenavn.trim() && nye.some(n => n.tekst));
@@ -1141,14 +1116,13 @@ function lagreNy(nå){
   const d = nData();
   d.tekst      = $("n-tekst").value;
   d.kriterium  = $("n-kriterium").value;
-  d.leveranse  = $("n-leveranse").value;
   skriv(NOKKEL.nye, nye);              // synkront først, alltid
   synkStatus("Lagret lokalt");
   clearTimeout(nTimer);
   const sendNå = () => {
     if(!gruppenavn.trim()){ manglerGruppe(true); return; }
-    send("ws_sett_ny", {p_navn:gruppenavn, p_lopenr:d.lopenr, p_tekst:d.tekst,
-      p_kriterium:d.kriterium, p_leveranse:d.leveranse}, true);
+    send("ws_sett_ny", {p_navn:gruppenavn, p_lopenr:d.lopenr,
+      p_tekst:d.tekst, p_kriterium:d.kriterium}, true);
   };
   if(nå) sendNå(); else nTimer = setTimeout(sendNå, 900);
 }
@@ -1156,8 +1130,7 @@ function lagreNy(nå){
   $(id).addEventListener("input", () => lagreNy(false));
   $(id).addEventListener("blur",  () => lagreNy(true));
 });
-/* Et valg er ferdig i det det gjøres — ingen grunn til å vente på debouncen. */
-$("n-leveranse").addEventListener("change", () => lagreNy(true));
+
 $("n-ny").onclick = () => {
   lagreNy(true);
   /* Et tomt forslag til skal ikke lages før det forrige har innhold — ellers
@@ -1199,8 +1172,8 @@ $("g-gruppenavn").addEventListener("blur", () => {
     send("ws_sett_gruppe", {p_navn:gruppenavn, p_nr:+nr, p_god_nok:d.god_nok,
       p_forenkling:d.forenkling||"", p_validering:d.validering||""}));
   nye.filter(n => n && n.tekst.trim()).forEach(n =>
-    send("ws_sett_ny", {p_navn:gruppenavn, p_lopenr:n.lopenr, p_tekst:n.tekst,
-      p_kriterium:n.kriterium||"", p_leveranse:n.leveranse||""}));
+    send("ws_sett_ny", {p_navn:gruppenavn, p_lopenr:n.lopenr,
+      p_tekst:n.tekst, p_kriterium:n.kriterium||""}));
 });
 $("meg").onclick = () => visNavnegate();
 
