@@ -98,9 +98,9 @@ h1{font-family:var(--f-display);font-size:clamp(22px,2.3vw,38px);margin:0;letter
 /* Minimum 15px og ikke 12: merkelinja er det publikum roper ut når de vil
    snakke om en hypotese («ta H-28 igjen»). Er den uleselig bakerst, må de
    beskrive påstanden i stedet, og da stopper samtalen opp. */
-.merke{display:flex;align-items:center;gap:9px;
+.merke{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;
   font:600 clamp(15px,.95vw,19px)/1.2 var(--f-mono);color:var(--muted);letter-spacing:.05em}
-.prikk{width:clamp(11px,.8vw,15px);aspect-ratio:1;border-radius:50%;
+.prikk{width:clamp(11px,.8vw,15px);aspect-ratio:1;border-radius:50%;align-self:center;
   background:var(--lev,var(--accent));flex:none}
 /* Skalerer på vh og ikke bare vw: en bred, lav projektor har plass i bredden,
    men ikke i høyden, og det er høyden som avgjør hvor mange linjer det blir.
@@ -563,7 +563,10 @@ function tegnOversikt(){
     const m = document.createElement("div");
     m.className = "merke";
     const p = document.createElement("span"); p.className = "prikk";
-    m.append(p, document.createTextNode(`${hNr(x.nr)} · L${levNr(x.lev)}`));
+    /* Leveransen skrives ut i klartekst. «L6» er en kode bare den som har
+       lista foran seg kan lese, og hele poenget med økten er å koble hypotese
+       til leveranse — da kan koblingen ikke være en forkortelse. */
+    m.append(p, document.createTextNode(`${hNr(x.nr)} · L${levNr(x.lev)} ${levNavn(x.lev)}`));
     /* Egen markering på kortet: oversikten er det eneste stedet man ser hva
        man har rukket å vurdere og hva som gjenstår. */
     if(pri[x.nr]){
@@ -615,7 +618,8 @@ function vis(i){
 
   const lev = $("e-lev");
   const p = document.createElement("span"); p.className = "prikk";
-  lev.replaceChildren(p, document.createTextNode(`${hNr(x.nr)} · L${levNr(x.lev)}`));
+  lev.replaceChildren(p, document.createTextNode(
+    `${hNr(x.nr)} · L${levNr(x.lev)} ${levNavn(x.lev)}`));
 
   /* «Vi tror at» og «Vi vet det når» er rammen hele registeret er skrevet i.
      Uten dem leses påstanden som et utsagn, og da er den ikke lenger en
@@ -628,7 +632,7 @@ function vis(i){
     document.createTextNode(x.krit));
 
   $("teller").textContent = `${idx+1} av ${HYP.length}`;
-  $("e-lev-navn").textContent = levNavn(x.lev);
+  $("e-lev-navn").textContent = "";   // leveransen står i toppen nå
   $("forrige").disabled = idx <= 0;
   $("neste").disabled   = idx >= HYP.length-1;
   $("hjelp").textContent = "← → blar · Backspace tilbake · F fullskjerm";
@@ -888,6 +892,13 @@ function tegnSvar(d){
       blokk.className = "s-blokk";
       if(x) blokk.style.setProperty("--lev", levFarge(x.lev));
 
+      if(x){
+        const merke = document.createElement("div");
+        merke.className = "merke";
+        const prikk = document.createElement("span"); prikk.className = "prikk";
+        merke.append(prikk, document.createTextNode(`L${levNr(x.lev)} ${levNavn(x.lev)}`));
+        blokk.append(merke);
+      }
       const hode = document.createElement("h3");
       hode.textContent = `${hNr(nr)} — ${x ? x.tekst : "(ukjent hypotese)"}`;
       blokk.append(hode);
