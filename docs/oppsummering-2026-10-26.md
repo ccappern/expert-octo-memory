@@ -1,15 +1,11 @@
 # Oppsummering: hva må avklares, av hvem, innen når
 
-**Utkast til utfylling.** Fra workshopen 26.10.2026. 17 deltakere vurderte, 7 grupper svarte.
 
 Tre av fem kolonner er fylt ut fra det rommet faktisk gjorde:
 
 - **Kritisk før go/no-go** følger av avstemningen
 - **Hvordan validere** er gruppenes egne svar, sammenstilt per hypotese
 - **Hypotese** er gitt
-
-**Eier** og **Neste steg** står åpne. Det er det som gjenstår, og det er en halvtimes runde —
-ikke en ny samling.
 
 ---
 
@@ -175,3 +171,138 @@ navnene ble skrevet fritt, og noen grupper brukte flere.
 
 **Oppgaven ble ikke fullført i rommet.** Eier og neste steg ble aldri diskutert i plenum.
 Det som står her er avledet av avstemning og gruppearbeid, ikke av en felles beslutning.
+
+---
+
+# Forslag til nye hypoteser
+
+Skrevet ut i samme form som registeret ellers: **én påstand, ett kriterium.**
+
+## Normen de er skrevet etter
+
+Gruppene sa H-28 og H-29 er «for lang». Tallene gir dem rett — det er de eneste over
+30 ord:
+
+| Lengde | Hypoteser |
+|---|---|
+| 14–20 ord | H-01, H-02, H-26, H-14, H-30 |
+| 27–30 ord | H-22, H-11 |
+| 40 ord | **H-28** |
+| 53 ord | **H-29** |
+
+**Regel: én setning, én påstand, maks 20 ord.** Trenger du «og» mellom to påstander, er det
+to hypoteser. Kriteriet skal kunne slå begge veier — et kriterium som bare kan bekrefte,
+tester ingenting.
+
+---
+
+## A. Bekreftet av rommet
+
+### N-01 · Felles kriterier for hva som deles
+**Vi tror at** virksomhetene kan bli enige om felles kriterier for hva som skal deles.
+**Vi vet det når** minst tre selskaper har godkjent samme sett delingskriterier skriftlig.
+*Motbevis: hver virksomhet holder på sin egen terskel, og delingen blir vilkårlig.*
+
+> Foreslått av Gruppe 2 — og uavhengig etterlyst av tre andre grupper, som
+> valideringskommentar på H-01 og H-02: «felles kriterier», «hva bør deles og hvordan»,
+> «når er en sak for liten eller for stor». **Det sterkeste signalet i datasettet.**
+> Leveranse 1 eller 2.
+
+### N-02 · Hvem er brukeren
+**Vi tror at** CSOC er primærbruker av Nordlys, og IKT-sikkerhetskoordinator sekundærbruker.
+**Vi vet det når** minst tre selskaper har bekreftet hvem som faktisk ville brukt løsningen
+i daglig drift.
+*Motbevis: det er koordinatoren som bruker den, og CSOC-ene har egne verktøy de blir i.*
+
+> Foreslått av Gruppe 2. Leveranse 1. Henger sammen med at H-04 om drifts- og OT-personell
+> ble arkivert — brukergruppen er nå udefinert i registeret.
+
+---
+
+## B. Utledet av gruppesvarene — må bekreftes før de legges inn
+
+Disse sa ingen gruppe eksplisitt. De er lest ut av valideringstekstene, og bør avvises
+eller vedtas bevisst.
+
+### N-03 · Terskelen for de minste
+**Vi tror at** de minste KBO-enhetene kan delta uten å ha egen driftskapasitet.
+**Vi vet det når** en driftsmodell for små aktører er beskrevet og akseptert av minst to av
+dem.
+*Motbevis: enhver modell forutsetter ressurser de ikke har, og de faller utenfor likevel.*
+
+> Gruppe 2 på H-28: «Vi må utvikle en lavinnsatsmetode for de minste selskapene.»
+> Hypotesekonderne på H-26: «finne et passende nivå som er akseptabelt også for de mindre
+> aktørene.» To grupper, samme bekymring — og H-13 om kostnad ble arkivert under
+> opprydningen. Leveranse 5 eller 6.
+
+### N-04 · Konfidens på indikatorer
+**Vi tror at** delte indikatorer kan merkes med et konfidensnivå mottakeren stoler på.
+**Vi vet det når** en konfidensmodell er prøvd i pilot og mottakerne sier de faktisk bruker
+den.
+*Motbevis: merkingen ignoreres, og alt verifiseres manuelt uansett.*
+
+> Gruppe 2 på H-30: «Må ha en metode for å sette konfidens.» Det er en **forutsetning** for
+> H-30, ikke en måte å validere den på. Leveranse 2.
+
+### N-05 · Alternativt tillitsanker
+**Vi tror at** NVE eller NSM kan tre inn som tillitsanker dersom KraftCERT ikke kan.
+**Vi vet det når** minst én av dem har uttalt seg skriftlig om rollen før go/no-go.
+*Motbevis: begge avviser rollen, og H-11 står uten reserveløsning.*
+
+> Hypotesekonderne på H-11: «mer ukjent opplevelse av hvilken rolle NVE og NSM vil ha i en
+> alternativ modell». H-11 **nevner** dem, men tester det ikke. Leveranse 5.
+
+---
+
+## C. Omskriving av de to lange
+
+Gruppene ba om det. Begge er delt i to, fordi de bunter påstander som kan være ulikt sanne.
+
+### H-28 i dag — 40 ord
+> Dagens løsninger betjener bare den delen av sektoren som har infrastruktur, kompetanse og
+> bemanning til å drifte dem. Nordlys når resten — med lav etableringsterskel, utvidbarhet
+> utover cybersikkerhetsdata, og uten at lav terskel forutsetter at noen andre eier dataene
+> dine.
+
+**H-28a** — Vi tror at en vesentlig del av KBO-enhetene i dag står utenfor enhver
+delingsordning. *Vi vet det når* et notat tallfester hvor mange, og hvorfor.
+
+**H-28b** — Vi tror at Nordlys senker etableringsterskelen uten at noen andre må eie dataene
+dine. *Vi vet det når* Nordlys er sammenlignet med MISP hos KraftCERT og egen MISP-instans,
+på terskel og dataeierskap.
+
+### H-29 i dag — 53 ord
+**H-29a** — Vi tror at brukerne bare reagerer i tide hvis plattformen varsler i en kanal de
+allerede bruker. *Vi vet det når* minst 2 av 3 selskaper i pilot reagerer på et relevant
+varsel innen én time.
+
+**H-29b** — Vi tror at varselvolumet kan holdes lavt nok til at varslene ikke ignoreres.
+*Vi vet det når* varselvolum og relevans per mottaker er målt i pilot.
+
+---
+
+## Å ta stilling til
+
+| Forslag | Status | Beslutning |
+|---|---|---|
+| N-01 Felles kriterier | Bekreftet, fire grupper | |
+| N-02 Hvem er brukeren | Bekreftet, én gruppe | |
+| N-03 Terskelen for de minste | Utledet | |
+| N-04 Konfidens | Utledet | |
+| N-05 Alternativt tillitsanker | Utledet | |
+| H-28 → a/b | Gruppene ba om det | |
+| H-29 → a/b | Gruppene ba om det | |
+
+Legges alle inn, går registeret fra 9 til 16. Det er over målet på 6–10 **kritiske** — men
+de nye er ikke automatisk kritiske. Avgjør først hvilke som skal inn, deretter hvilke som må
+avklares før go/no-go.
+
+## Hvorfor det bare kom to forslag
+
+Fire av fem grupper leverte ingenting under «mangler det en hypotese?». Oppgaven kom sent
+inn i verktøyet, lå bak et klikk i gruppebildet, og ble trolig ikke nevnt i den muntlige
+oppgaveteksten.
+
+Signalet var der likevel — det havnet bare i feil felt. Fire grupper etterlyste felles
+delingskriterier som valideringskommentar på noe annet. **Oppgaven ble ikke stilt, så den
+ble ikke besvart** — ikke at det ikke manglet noe.
