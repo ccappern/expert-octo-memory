@@ -116,7 +116,7 @@ Full tekst med kriterier og motbevis står i `oppsummering-2026-10-26.md`.
 
 ---
 
-## Fordeling per leveranse
+## 4. Fordeling per leveranse
 
 Aktive hypoteser, etter leveransene i workshopagendaen.
 
@@ -140,20 +140,62 @@ falt bort.
 
 ---
 
-## Åpne beslutninger
+## 5. Kriteriene tester ikke alltid noe
 
-1. **H-12** — rettes eller arkiveres?
-2. **H-26** — 7 mot 7. Kritisk eller ikke?
-3. **H-14** — splittes i tre før eier settes?
-4. **H-02** — omformuleres etter Gruppe TAIDs forslag?
-5. **H-01** — forplikte virksomheten eller analytikeren?
-6. **N-01 til N-05** — hvilke legges inn?
-7. **H-28 og H-29** — deles i to?
-8. **H-25 og den uten nummer** — slettes permanent?
+Et kriterium skal kunne **slå begge veier**. Står det bare at en aktivitet er gjennomført,
+er det oppfylt uansett hva aktiviteten viste — og da kan en eier melde «ferdig» uten at
+noen vet om svaret var ja eller nei.
+
+Gjennomgang av de ni aktive:
+
+| # | Kriteriet | Kan det feile? |
+|---|---|---|
+| H-22 | «tre selskaper har **bekreftet skriftlig** at de stiller med ressurser» | **Ja.** De kan la være. |
+| H-26 | «hver deltaker har **bekreftet** driftskapasitet, **eller** det foreligger en avklart modell» | **Ja.** Begge deler kan mangle. |
+| H-29 | «minst **2 av 3** reagerer på et relevant varsel **innen 1 time**» | **Ja.** Tallfestet terskel. |
+| H-30 | «andelen … er målt, og analytikerne har vurdert treffsikkerheten» | Delvis — reddes av eksplisitt motbevis. |
+| H-28 | «et notat som (a) tallfester … (b) sammenligner … (c) viser» | Delvis — reddes av eksplisitt motbevis. |
+| H-01 | «operativt personell … **har beskrevet** hva de ville delt» | **Nei.** Oppfylt også om svaret er «ingenting». |
+| H-02 | «vi **har en baseline** … og det samme forløpet **er målt**» | **Nei.** Sier ikke at tiden ble kortere. |
+| H-11 | «KraftCERT **har gitt** skriftlig tilbakemelding … modeller **er utredet**» | **Nei.** Oppfylt også ved avslag. |
+| H-14 | «NVE **har gitt** tilbakemelding … juridisk analyse **foreligger**» | **Nei.** Oppfylt også ved nei. |
+| H-12 | «intensjonsavklaring … **er gjennomgått** … **er behandlet**» | **Nei.** Rent aktivitetskriterium. |
+
+### Mønsteret er det urovekkende
+
+**De fire mest kritiske hypotesene har de svakeste kriteriene.** H-01, H-14, H-02 og H-11 er
+nummer én til fire i avstemningen — og alle fire har kriterier som er oppfylt uansett
+utfall.
+
+De tre som faktisk kan feile (H-22, H-26, H-29) ligger på plass fem, seks og sju.
+
+Det er ikke tilfeldig. Jo viktigere en hypotese er, jo mer ubehagelig er det å skrive et
+kriterium som kan felle den — og da blir det lettere å skrive ned hvilken *aktivitet* som
+skal gjennomføres i stedet.
+
+### Hva som må gjøres
+
+Hver av de fem bør få et kriterium som kan slå begge veier. Mønsteret finnes allerede i
+registeret: H-29 sier «minst 2 av 3 innen 1 time», og H-28 og H-30 har egne
+motbevis-setninger.
+
+Forslag til retning, ikke ferdige formuleringer:
+
+- **H-01** — ikke «har beskrevet», men *hvor mange* av dem som sier de faktisk ville delt,
+  og hva terskelen er.
+- **H-02** — ikke «er målt», men at det målte forløpet faktisk er **kortere** enn baselinen.
+- **H-11** — ikke «har gitt tilbakemelding», men at svaret er **ja**, eller at en alternativ
+  modell er **akseptert** av deltakerne.
+- **H-14** — ikke «foreligger», men at analysen **konkluderer** med at deling er tillatt —
+  og hva som skjer hvis den ikke gjør det.
+- **H-12** — samme: hva må intensjonsavklaringene faktisk si?
+
+**Dette er den jobben som gir mest igjen per time.** Et kritisk spørsmål med et kriterium
+som ikke kan svare nei, gir styringsgruppen et «ferdig» som ikke betyr noe.
 
 ---
 
-## 4. Full tekst — påstand og kriterium
+## 6. Full tekst — påstand og kriterium
 
 Ordrett fra registeret. Kriteriet er halve hypotesen: uten det er påstanden
 bare en mening.
@@ -380,3 +422,18 @@ deltakende selskapene
 *Vi tror at* deling mellom eksisterende deltakere fortsetter selv om tillitsankeret er utilgjengelig
 
 *Vi vet det når* en demonstrasjon der ankeret slås av, og deling mellom allerede onboardede noder fortsetter
+
+---
+
+## 7. Åpne beslutninger
+
+1. **H-12** — rettes eller arkiveres?
+2. **H-26** — 7 mot 7. Kritisk eller ikke?
+3. **H-14** — splittes i tre før eier settes?
+4. **H-02** — omformuleres etter Gruppe TAIDs forslag?
+5. **H-01** — forplikte virksomheten eller analytikeren?
+6. **N-01 til N-05** — hvilke legges inn?
+7. **H-28 og H-29** — deles i to?
+8. **H-25 og den uten nummer** — slettes permanent?
+9. **Kriteriene på H-01, H-02, H-11, H-14 og H-12** — skrives om så de kan slå begge
+   veier? Se seksjon 5.
